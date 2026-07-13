@@ -16,18 +16,25 @@ import {
 
 /* ── URL <-> state helpers ───────────────────────────────────────────────── */
 // The URL is the single source of truth (deep-linkable, shareable, Back/Forward safe).
-const readState = (sp) => ({
-  q: sp.get("q") || "",
-  category: sp.get("category") || "",
-  condition: sp.get("condition") || "",
-  min: sp.get("min") || "",
-  max: sp.get("max") || "",
-  rating: sp.get("rating") || "",
-  includeSold: sp.get("sold") === "1",
-  sort: sp.get("sort") || "relevance",
-  page: Math.max(1, Number(sp.get("page")) || 1),
-  view: sp.get("view") === "list" ? "list" : "grid",
-});
+// A `preset` (used by section pages like /trending) supplies base params that
+// apply until the user overrides them via the URL/filters.
+const readState = (sp, preset) => {
+  const P = (preset && preset.params) || {};
+  return {
+    q: sp.get("q") || P.q || "",
+    category: sp.get("category") || P.category || "",
+    condition: sp.get("condition") || P.condition || "",
+    min: sp.get("min") || P.min || "",
+    max: sp.get("max") || P.max || "",
+    rating: sp.get("rating") || P.rating || "",
+    minDiscount: sp.get("minDiscount") || P.minDiscount || "",
+    pricingType: sp.get("pricingType") || P.pricingType || "",
+    includeSold: sp.get("sold") === "1",
+    sort: sp.get("sort") || P.sort || "relevance",
+    page: Math.max(1, Number(sp.get("page")) || 1),
+    view: sp.get("view") === "list" ? "list" : "grid",
+  };
+};
 
 // Build the API query from URL state.
 const buildQuery = (s) => {
@@ -42,6 +49,8 @@ const buildQuery = (s) => {
   if (s.min) p.set("minPrice", s.min);
   if (s.max) p.set("maxPrice", s.max);
   if (s.rating) p.set("minRating", s.rating);
+  if (s.minDiscount) p.set("minDiscount", s.minDiscount);
+  if (s.pricingType) p.set("pricingType", s.pricingType);
   if (s.includeSold) p.set("includeSold", "true");
   return p.toString();
 };
@@ -186,6 +195,25 @@ const FilterPanel = ({ state, facets, setParam, clearAll }) => {
         </div>
       </Section>
 
+      <Section title="Pricing">
+        <div className="flex gap-2">
+          {[
+            { value: "FIXED", label: "Fixed Price" },
+            { value: "NEGOTIABLE", label: "Negotiable" },
+          ].map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setParam({ pricingType: state.pricingType === p.value ? "" : p.value })}
+              className={`flex-1 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                state.pricingType === p.value ? "bg-brand-700 border-brand-700 text-white" : "border-border text-text-secondary hover:bg-secondary-50"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Rating">
         <div className="space-y-1">
           {[4, 3, 2].map((r) => (
@@ -198,6 +226,22 @@ const FilterPanel = ({ state, facets, setParam, clearAll }) => {
             >
               <StarRow value={r} />
               <span className="text-xs text-text-secondary">&amp; up</span>
+            </button>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Discount">
+        <div className="space-y-1">
+          {[10, 20, 30, 50].map((d) => (
+            <button
+              key={d}
+              onClick={() => setParam({ minDiscount: state.minDiscount === String(d) ? "" : String(d) })}
+              className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                state.minDiscount === String(d) ? "bg-brand-50 text-brand-700 font-semibold" : "text-text-secondary hover:bg-secondary-50"
+              }`}
+            >
+              {d}% off or more
             </button>
           ))}
         </div>
@@ -219,9 +263,9 @@ const FilterPanel = ({ state, facets, setParam, clearAll }) => {
 };
 
 /* ── Page ────────────────────────────────────────────────────────────────── */
-const SearchResults = () => {
+const SearchResults = ({ preset }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const state = useMemo(() => readState(searchParams), [searchParams]);
+  const state = useMemo(() => readState(searchParams, preset), [searchParams, preset]);
 
   const [products, setProducts] = useState([]);
   const [facets, setFacets] = useState(null);
@@ -312,13 +356,20 @@ const SearchResults = () => {
 
   const activeFilters = useMemo(() => {
     const chips = [];
-    if (state.category) chips.push({ key: "category", label: state.category });
+    // Curated multi-category presets (e.g. Recommended for Students) apply a
+    // comma-joined category list by default — only surface it as a removable
+    // chip once the shopper has actually narrowed it further.
+    if (state.category && state.category !== preset?.params?.category) {
+      chips.push({ key: "category", label: state.category });
+    }
     if (state.condition) chips.push({ key: "condition", label: state.condition });
     if (state.min || state.max) chips.push({ key: "price", label: `₹${state.min || 0} – ${state.max ? "₹" + state.max : "∞"}` });
     if (state.rating) chips.push({ key: "rating", label: `${state.rating}★ & up` });
+    if (state.minDiscount) chips.push({ key: "minDiscount", label: `${state.minDiscount}%+ off` });
+    if (state.pricingType) chips.push({ key: "pricingType", label: state.pricingType === "NEGOTIABLE" ? "Negotiable" : "Fixed price" });
     if (state.includeSold) chips.push({ key: "sold", label: "Incl. sold" });
     return chips;
-  }, [state]);
+  }, [state, preset]);
 
   const removeChip = (key) => {
     if (key === "price") setParam({ min: "", max: "" });
@@ -337,7 +388,13 @@ const SearchResults = () => {
     return span;
   }, [meta.totalPages, meta.page]);
 
-  const heading = state.q ? `Results for “${state.q}”` : state.category ? state.category : "All products";
+  const heading = preset?.title
+    ? preset.title
+    : state.q
+    ? `Results for “${state.q}”`
+    : state.category
+    ? state.category
+    : "All products";
 
   return (
     <div className="min-h-screen bg-secondary-50">

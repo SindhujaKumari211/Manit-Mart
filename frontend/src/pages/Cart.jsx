@@ -6,6 +6,7 @@ import EmptyState from "../components/ui/EmptyState";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import { useCart } from "../context/CartContext";
+import { handleImageError, productImage } from "../lib/categoryImages";
 
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 
@@ -50,9 +51,10 @@ const Cart = () => {
           className={`flex-shrink-0 w-full sm:w-32 h-32 bg-slate-100 rounded-lg overflow-hidden ${unavailable ? "opacity-60" : ""}`}
         >
           <img
-            src={item.product.image}
+            src={productImage(item.product)}
             alt={item.product.name}
             loading="lazy"
+            onError={(e) => handleImageError(e, item.product.category)}
             className="w-full h-full object-cover hover:scale-105 transition-transform"
           />
         </Link>

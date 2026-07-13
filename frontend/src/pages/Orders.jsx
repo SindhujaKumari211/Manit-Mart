@@ -7,6 +7,7 @@ import Button from "../components/ui/Button";
 import Modal from "../components/ui/Modal";
 import EmptyState from "../components/ui/EmptyState";
 import { downloadInvoice } from "../lib/invoice";
+import { handleImageError, productImage } from "../lib/categoryImages";
 
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 const PAGE = 6;
@@ -129,7 +130,7 @@ const OrderCard = ({ order, isSeller, onCancel, onStatus, onReview, onContact, b
         <div className="flex gap-4">
           {product ? (
             <Link to={`/product/${product._id}`} className="w-20 h-20 rounded-lg overflow-hidden bg-secondary-100 shrink-0">
-              <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
+              <img src={productImage(product)} alt={product.name} loading="lazy" onError={(e) => handleImageError(e, product.category)} className="w-full h-full object-cover" />
             </Link>
           ) : (
             <div className="w-20 h-20 rounded-lg bg-secondary-100 shrink-0 flex items-center justify-center text-secondary-300">

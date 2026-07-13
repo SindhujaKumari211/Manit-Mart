@@ -1,28 +1,12 @@
+import { useEffect, useState } from "react";
+import API from "../services/api";
 import useHorizontalScroll from "../hooks/useHorizontalScroll";
 
-const CATEGORIES = [
-  { label: "Books", value: "Books" },
-  { label: "Notes", value: "Notes" },
-  { label: "Electronics", value: "Electronics" },
-  { label: "Laptops", value: "Laptops" },
-  { label: "Mobiles", value: "Mobiles" },
-  { label: "Cycles", value: "Cycles" },
-  { label: "Hostel Essentials", value: "Hostel Essentials" },
-  { label: "Kitchen Items", value: "Kitchen Items" },
-  { label: "Study Table", value: "Study Table" },
-  { label: "Chairs", value: "Chairs" },
-  { label: "Sports", value: "Sports" },
-  { label: "Calculators", value: "Calculators" },
-  { label: "Lab Equipment", value: "Laboratory Equipment" },
-  { label: "Fashion", value: "Fashion" },
-  { label: "Bags", value: "Bags" },
-  { label: "Shoes", value: "Shoes" },
-  { label: "Stationery", value: "Stationery" },
-  { label: "Accessories", value: "Accessories" },
-  { label: "Room Decor", value: "Room Decor" },
-  { label: "Musical Instruments", value: "Musical Instruments" },
-  { label: "Others", value: "Other" },
-];
+// Shorter display labels for a few long category names (purely cosmetic).
+const LABEL_OVERRIDES = {
+  "Laboratory Equipment": "Lab Equipment",
+  Other: "Others",
+};
 
 const ICON_PATHS = {
   Books: (
@@ -44,6 +28,13 @@ const ICON_PATHS = {
     <>
       <rect x="4" y="4" width="16" height="11" rx="1.5" />
       <path d="M2 19h20" />
+    </>
+  ),
+  Gadgets: (
+    <>
+      <rect x="7" y="2" width="10" height="20" rx="2.5" />
+      <circle cx="12" cy="17.5" r="1.2" />
+      <path d="M9 5.5h6" />
     </>
   ),
   Mobiles: (
@@ -143,6 +134,17 @@ const ICON_PATHS = {
   ),
 };
 
+// Generic fallback glyph for any category that doesn't have a bespoke icon
+// (e.g. a brand-new category added in the backend).
+const DEFAULT_ICON = (
+  <>
+    <rect x="4" y="4" width="7" height="7" rx="1.5" />
+    <rect x="13" y="4" width="7" height="7" rx="1.5" />
+    <rect x="4" y="13" width="7" height="7" rx="1.5" />
+    <rect x="13" y="13" width="7" height="7" rx="1.5" />
+  </>
+);
+
 const CategoryIcon = ({ label }) => (
   <svg
     viewBox="0 0 24 24"
@@ -153,7 +155,7 @@ const CategoryIcon = ({ label }) => (
     strokeLinejoin="round"
     className="w-[15px] h-[15px] sm:w-[17px] sm:h-[17px]"
   >
-    {ICON_PATHS[label]}
+    {ICON_PATHS[label] || DEFAULT_ICON}
   </svg>
 );
 
@@ -161,6 +163,29 @@ const CategoryCarousel = ({ activeCategory, onSelect }) => {
   const { scrollRef, canScrollLeft, canScrollRight, scrollByAmount, bind } = useHorizontalScroll({
     scrollStep: 320,
   });
+
+  // Categories are backend-driven: new categories in the DB appear here with no
+  // code change. We only show categories that currently have available products.
+  const [categories, setCategories] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    API.get("/products/categories")
+      .then((res) => {
+        if (!alive) return;
+        const list = (res.data?.categories || [])
+          .filter((c) => c.count > 0)
+          .map((c) => ({ value: c.value, label: LABEL_OVERRIDES[c.value] || c.value }));
+        setCategories(list);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Nothing to show until the catalog has categories (keeps the bar from
+  // flashing an empty strip).
+  if (categories.length === 0) return null;
 
   return (
     <div className="sticky top-16 z-40 bg-white/95 backdrop-blur border-b border-border">
@@ -195,7 +220,7 @@ const CategoryCarousel = ({ activeCategory, onSelect }) => {
           className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-2 px-3 sm:px-6 lg:px-8 cursor-grab active:cursor-grabbing select-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           style={{ scrollSnapType: "x proximity" }}
         >
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const active = activeCategory === cat.value;
             return (
               <button

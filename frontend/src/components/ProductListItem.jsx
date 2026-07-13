@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
 import Badge from "./ui/Badge";
 import { useWishlist } from "../context/WishlistContext";
-
-const IMG_FALLBACK =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f1f5f9'/%3E%3C/svg%3E";
+import { handleImageError, productImage } from "../lib/categoryImages";
 
 /**
  * Horizontal product card for the search results "list" view. Shares the wishlist
@@ -21,12 +19,10 @@ const ProductListItem = ({ product, onClick }) => {
       <Link to={to} onClick={onClick} className="shrink-0">
         <div className="relative w-28 h-28 sm:w-40 sm:h-32 rounded-xl overflow-hidden bg-secondary-100">
           <img
-            src={product.image || IMG_FALLBACK}
+            src={productImage(product)}
             alt={product.name}
             loading="lazy"
-            onError={(e) => {
-              e.currentTarget.src = IMG_FALLBACK;
-            }}
+            onError={(e) => handleImageError(e, product.category)}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           {product.isSold && (

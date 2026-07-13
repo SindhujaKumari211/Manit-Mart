@@ -7,11 +7,13 @@ const WishlistContext = createContext(null);
 export const WishlistProvider = ({ children }) => {
   const { isLoggedIn } = useAuth();
   const [wishlistIds, setWishlistIds] = useState(new Set());
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const refetch = useCallback(async () => {
     if (!isLoggedIn) {
       setWishlistIds(new Set());
+      setItems([]);
       return;
     }
     try {
@@ -19,13 +21,9 @@ export const WishlistProvider = ({ children }) => {
       const response = await API.get("/wishlist");
       // Guard against orphaned entries (deleted product) so a bad item can't
       // crash the provider that wraps the whole app.
-      setWishlistIds(
-        new Set(
-          (Array.isArray(response.data) ? response.data : [])
-            .filter((item) => item.product)
-            .map((item) => item.product._id)
-        )
-      );
+      const valid = (Array.isArray(response.data) ? response.data : []).filter((item) => item.product);
+      setWishlistIds(new Set(valid.map((item) => item.product._id)));
+      setItems(valid);
     } catch (error) {
       console.error("Failed to fetch wishlist:", error);
     } finally {
@@ -72,7 +70,7 @@ export const WishlistProvider = ({ children }) => {
 
   return (
     <WishlistContext.Provider
-      value={{ isInWishlist, toggleWishlist, count: wishlistIds.size, loading, refetch }}
+      value={{ isInWishlist, toggleWishlist, count: wishlistIds.size, items, loading, refetch }}
     >
       {children}
     </WishlistContext.Provider>

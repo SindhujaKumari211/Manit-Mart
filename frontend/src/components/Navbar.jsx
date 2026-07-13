@@ -5,6 +5,7 @@ import { useWishlist } from "../context/WishlistContext";
 import API from "../services/api";
 import Logo from "./ui/Logo";
 import SearchBar from "./SearchBar";
+import NotificationBell from "./NotificationBell";
 
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2";
@@ -193,6 +194,7 @@ const Navbar = () => {
                   </Link>
 
                   <div className="flex items-center ml-1">
+                    <NotificationBell />
                     <IconButton
                       to="/wishlist"
                       ariaLabel={`Wishlist${wishlistCount > 0 ? ` (${wishlistCount} items)` : ""}`}
@@ -259,6 +261,7 @@ const Navbar = () => {
                         {[
                           { to: "/profile", label: "My Profile" },
                           { to: "/my-products", label: "My Products" },
+                          { to: "/offers", label: "My Offers" },
                           { to: "/wishlist", label: "Wishlist" },
                           { to: "/orders", label: "Orders" },
                         ].map((item) => (
@@ -302,12 +305,17 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Mobile Hamburger */}
+            {/* Mobile: notification bell + hamburger */}
+            {isLoggedIn && (
+              <div className="md:hidden ml-auto">
+                <NotificationBell />
+              </div>
+            )}
             <button
               onClick={() => setMenuOpen(true)}
               aria-label="Open menu"
               aria-expanded={menuOpen}
-              className={`md:hidden ml-auto flex items-center justify-center w-10 h-10 rounded-lg text-text-secondary hover:bg-secondary-100 transition-colors duration-200 ${focusRing}`}
+              className={`md:hidden ${isLoggedIn ? "" : "ml-auto"} flex items-center justify-center w-10 h-10 rounded-lg text-text-secondary hover:bg-secondary-100 transition-colors duration-200 ${focusRing}`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -399,6 +407,13 @@ const Navbar = () => {
                   className="block px-4 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-secondary-100 transition-colors"
                 >
                   My Products
+                </Link>
+                <Link
+                  to="/offers"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-4 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:bg-secondary-100 transition-colors"
+                >
+                  My Offers
                 </Link>
                 <Link
                   to="/orders"

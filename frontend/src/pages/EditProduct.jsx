@@ -2,25 +2,30 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../services/api";
 import Button from "../components/ui/Button";
-import { Label, Input, TextArea } from "../components/ui/Field";
+import { Label, Input, TextArea, Select } from "../components/ui/Field";
 
 const EditProduct = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   const [form, setForm] = useState({
     name: "",
     description: "",
     price: "",
     category: "",
+    subcategory: "",
     condition: "Used",
+    pricingType: "FIXED",
     department: "",
     hostel: "",
     image: "",
     phone: "",
     address: "",
   });
+
+  const subOptions = categories.find((c) => c.value === form.category)?.subcategories || [];
 
   // Protect Route
   useEffect(() => {
@@ -30,21 +35,25 @@ const EditProduct = () => {
     }
   }, [navigate]);
 
-  // Load Existing Product + seller contact info
+  // Load Existing Product + seller contact info + category taxonomy
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productRes, profileRes] = await Promise.all([
+        const [productRes, profileRes, categoriesRes] = await Promise.all([
           API.get(`/products/${id}`),
           API.get("/auth/profile"),
+          API.get("/products/categories"),
         ]);
         const product = productRes.data;
+        setCategories(categoriesRes.data?.categories || []);
         setForm({
           name: product.name || "",
           description: product.description || "",
           price: product.price ?? "",
           category: product.category || "",
+          subcategory: product.subcategory || "",
           condition: product.condition || "Used",
+          pricingType: product.pricingType || "FIXED",
           department: product.department || "",
           hostel: product.hostel || "",
           image: product.image || "",
@@ -77,7 +86,9 @@ const EditProduct = () => {
         description: form.description,
         price: Number(form.price),
         category: form.category,
+        subcategory: form.subcategory || "",
         condition: form.condition,
+        pricingType: form.pricingType,
         department: form.department,
         hostel: form.hostel,
         image: form.image,
@@ -139,9 +150,34 @@ const EditProduct = () => {
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Input type="text" name="category" value={form.category} onChange={handleChange} />
+                <Select
+                  name="category"
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value, subcategory: "" }))}
+                >
+                  <option value="" disabled>Select</option>
+                  {categories.map((c) => (
+                    <option key={c.value} value={c.value}>{c.value}</option>
+                  ))}
+                  {/* Preserve a legacy category that's no longer in the taxonomy */}
+                  {form.category && !categories.some((c) => c.value === form.category) && (
+                    <option value={form.category}>{form.category}</option>
+                  )}
+                </Select>
               </div>
             </div>
+
+            {subOptions.length > 0 && (
+              <div>
+                <Label htmlFor="subcategory">Subcategory <span className="text-slate-400 font-normal">(optional)</span></Label>
+                <Select name="subcategory" value={form.subcategory} onChange={handleChange}>
+                  <option value="">None</option>
+                  {subOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="condition">Condition</Label>
@@ -158,6 +194,29 @@ const EditProduct = () => {
                     }`}
                   >
                     {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="pricingType">Pricing</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: "FIXED", label: "Fixed Price" },
+                  { value: "NEGOTIABLE", label: "Negotiable" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, pricingType: opt.value }))}
+                    className={`py-2.5 rounded-xl text-sm font-semibold border transition ${
+                      form.pricingType === opt.value
+                        ? "bg-brand-700 border-brand-700 text-white"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {opt.label}
                   </button>
                 ))}
               </div>
