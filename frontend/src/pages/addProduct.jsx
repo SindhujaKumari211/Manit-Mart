@@ -11,6 +11,7 @@ const AddProduct = () => {
   const [imageMode, setImageMode] = useState("gallery"); // "gallery" | "camera" | "url"
   const [imagePreview, setImagePreview] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -24,6 +25,11 @@ const AddProduct = () => {
         address: data.address || "",
       }));
     }).catch(() => {});
+
+    // Category list is backend-driven so the form always matches the catalog.
+    API.get("/products/categories").then(({ data }) => {
+      setCategories(data?.categories || []);
+    }).catch(() => {});
   }, [navigate]);
 
   const [form, setForm] = useState({
@@ -31,15 +37,19 @@ const AddProduct = () => {
     description: "",
     price: "",
     category: "",
+    subcategory: "",
     brand: "",
     tags: "",
     condition: "Used",
+    pricingType: "FIXED",
     department: "",
     hostel: "",
     image: "",
     phone: "",
     address: "",
   });
+
+  const subOptions = categories.find((c) => c.value === form.category)?.subcategories || [];
 
   const [loading, setLoading] = useState(false);
 
@@ -60,15 +70,6 @@ const AddProduct = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (imageMode !== "url" && !imageFile) {
-      alert("Please select a product photo");
-      return;
-    }
-    if (imageMode === "url" && !form.image) {
-      alert("Please provide an image URL");
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -78,8 +79,11 @@ const AddProduct = () => {
         address: form.address,
       });
 
+      // Photo is optional — if the seller doesn't provide one, the backend
+      // assigns a category-correct placeholder so the listing always has a
+      // matching image.
       let imageUrl = form.image;
-      if (imageMode !== "url") {
+      if (imageMode !== "url" && imageFile) {
         const formData = new FormData();
         formData.append("image", imageFile);
         const { data } = await API.post("/upload", formData, {
@@ -94,15 +98,17 @@ const AddProduct = () => {
         description: form.description,
         price: Number(form.price),
         category: form.category,
+        subcategory: form.subcategory || undefined,
         brand: form.brand.trim(),
         tags: form.tags
           .split(",")
           .map((t) => t.trim())
           .filter(Boolean),
         condition: form.condition,
+        pricingType: form.pricingType,
         department: form.department,
         hostel: form.hostel,
-        image: imageUrl,
+        image: imageUrl || undefined,
       });
 
       navigate("/");
@@ -180,18 +186,31 @@ const AddProduct = () => {
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select name="category" onChange={handleChange} required defaultValue="">
+                <Select
+                  name="category"
+                  value={form.category}
+                  onChange={(e) => setForm((p) => ({ ...p, category: e.target.value, subcategory: "" }))}
+                  required
+                >
                   <option value="" disabled>Select</option>
-                  <option value="Books">Books</option>
-                  <option value="Electronics">Electronics</option>
-                  <option value="Furniture">Furniture</option>
-                  <option value="Clothing">Clothing</option>
-                  <option value="Sports">Sports</option>
-                  <option value="Stationery">Stationery</option>
-                  <option value="Other">Other</option>
+                  {categories.map((c) => (
+                    <option key={c.value} value={c.value}>{c.value}</option>
+                  ))}
                 </Select>
               </div>
             </div>
+
+            {subOptions.length > 0 && (
+              <div>
+                <Label htmlFor="subcategory">Subcategory <span className="text-slate-400 font-normal">(optional)</span></Label>
+                <Select name="subcategory" value={form.subcategory} onChange={handleChange}>
+                  <option value="">None</option>
+                  {subOptions.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="condition">Condition</Label>
@@ -208,6 +227,32 @@ const AddProduct = () => {
                     }`}
                   >
                     {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="pricingType">Pricing</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: "FIXED", label: "Fixed Price", hint: "Price is final" },
+                  { value: "NEGOTIABLE", label: "Negotiable", hint: "Accept offers" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setForm((p) => ({ ...p, pricingType: opt.value }))}
+                    className={`py-2.5 px-3 rounded-xl text-sm font-semibold border transition text-left ${
+                      form.pricingType === opt.value
+                        ? "bg-brand-700 border-brand-700 text-white"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block">{opt.label}</span>
+                    <span className={`block text-xs font-normal ${form.pricingType === opt.value ? "text-white/80" : "text-slate-400"}`}>
+                      {opt.hint}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -258,7 +303,9 @@ const AddProduct = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Product Photo</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Product Photo <span className="text-slate-400 font-normal">(optional — we&apos;ll use a category image if skipped)</span>
+              </label>
 
               {/* Mode Tabs */}
               <div className="flex rounded-xl border border-slate-200 overflow-hidden mb-3">

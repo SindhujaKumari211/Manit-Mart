@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import ProductCard from "./productCard";
 import FreshListingCard, { FreshListingSkeletonRow } from "./FreshListingCard";
 import { CardSkeletonGrid } from "./ui/Spinner";
@@ -6,6 +7,7 @@ import useHorizontalScroll from "../hooks/useHorizontalScroll";
 
 const FreshListings = ({
   products,
+  totalProducts = 0,
   loading,
   hasActiveFilter,
   category,
@@ -15,6 +17,12 @@ const FreshListings = ({
   clearFilters,
 }) => {
   const { scrollRef, canScrollLeft, canScrollRight, scrollByAmount, bind } = useHorizontalScroll();
+
+  const seeMoreHref = hasActiveFilter
+    ? `/search?${[category && `category=${encodeURIComponent(category)}`, search && `q=${encodeURIComponent(search)}`]
+        .filter(Boolean)
+        .join("&")}`
+    : "/search";
 
   return (
     <div id="listings" className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 py-10 sm:py-14 scroll-mt-32">
@@ -80,12 +88,25 @@ const FreshListings = ({
             />
             Show sold
           </label>
+          <Link
+            to={seeMoreHref}
+            className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:text-brand-800"
+          >
+            See more
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
       </div>
 
       {/* Results Count */}
       <p className="text-xs font-medium text-muted mb-5 uppercase tracking-wide">
-        {loading ? "Loading..." : `${products.length} product${products.length !== 1 ? "s" : ""}`}
+        {loading
+          ? "Loading..."
+          : totalProducts > products.length
+          ? `Showing ${products.length} of ${totalProducts} products`
+          : `${products.length} product${products.length !== 1 ? "s" : ""}`}
       </p>
 
       {/* Filtered: grid of search results (real data, unchanged behavior) */}

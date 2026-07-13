@@ -4,6 +4,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { WishlistProvider } from "./context/WishlistContext";
 import { CartProvider } from "./context/CartContext";
 import { OrdersProvider } from "./context/OrdersContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { ToastProvider } from "./context/ToastContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -12,8 +13,20 @@ import { PageSpinner } from "./components/ui/Spinner";
 import Home from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
 
+const ForYouPage = lazy(() => import("./pages/ForYouPage"));
+const OffersPage = lazy(() => import("./pages/OffersPage"));
+
+import { SECTIONS } from "./lib/sections";
+
 // Code-split the results page — it's a heavy, secondary route.
 const SearchResults = lazy(() => import("./pages/SearchResults"));
+
+// Section pages (Trending, New Arrivals, Deals) reuse the results page with a preset.
+const sectionRoute = (section) => (
+  <Suspense fallback={<PageSpinner label={`Loading ${section.title}…`} />}>
+    <SearchResults preset={section} />
+  </Suspense>
+);
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import AddProduct from "./pages/addProduct";
@@ -44,6 +57,18 @@ function RoutedContent() {
               </Suspense>
             }
           />
+          <Route path="/trending" element={sectionRoute(SECTIONS.trending)} />
+          <Route path="/new-arrivals" element={sectionRoute(SECTIONS["new-arrivals"])} />
+          <Route path="/recommended" element={sectionRoute(SECTIONS.recommended)} />
+          <Route path="/deals" element={sectionRoute(SECTIONS.deals)} />
+          <Route
+            path="/for-you"
+            element={
+              <Suspense fallback={<PageSpinner label="Loading your picks…" />}>
+                <ForYouPage />
+              </Suspense>
+            }
+          />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
@@ -55,6 +80,14 @@ function RoutedContent() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
+          <Route
+            path="/offers"
+            element={
+              <Suspense fallback={<PageSpinner label="Loading offers…" />}>
+                <OffersPage />
+              </Suspense>
+            }
+          />
           <Route path="/help" element={<Help />} />
         </Routes>
       </ErrorBoundary>
@@ -66,6 +99,7 @@ function App() {
   return (
     <ToastProvider>
     <AuthProvider>
+    <NotificationProvider>
     <WishlistProvider>
     <CartProvider>
     <OrdersProvider>
@@ -79,6 +113,7 @@ function App() {
     </OrdersProvider>
     </CartProvider>
     </WishlistProvider>
+    </NotificationProvider>
     </AuthProvider>
     </ToastProvider>
   );

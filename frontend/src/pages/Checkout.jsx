@@ -7,6 +7,7 @@ import { PageSpinner } from "../components/ui/Spinner";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import { Label, TextArea, Input, FieldError } from "../components/ui/Field";
+import { handleImageError, productImage } from "../lib/categoryImages";
 
 const STEPS = [
   { key: "address", label: "Address" },
@@ -250,7 +251,7 @@ const Checkout = () => {
                 {availableItems.map((item) => (
                   <div key={item._id} className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
-                      <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                      <img src={productImage(item.product)} alt={item.product.name} onError={(e) => handleImageError(e, item.product.category)} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800 truncate">{item.product.name}</p>

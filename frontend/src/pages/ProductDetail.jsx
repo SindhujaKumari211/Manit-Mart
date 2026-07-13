@@ -1,21 +1,39 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import API from "../services/api";
 import { PageSpinner } from "../components/ui/Spinner";
 import Badge from "../components/ui/Badge";
 import Button from "../components/ui/Button";
+import StarRating from "../components/ui/StarRating";
 import ProductCard from "../components/productCard";
+import MakeOfferModal from "../components/MakeOfferModal";
+import { addRecentlyViewed } from "../lib/recentlyViewed";
+import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR } from "../lib/productDisplay";
+import { handleImageError, getCategoryFallback } from "../lib/categoryImages";
+import { STATUS_META, offerActions } from "../lib/offers";
+import { useToast } from "../context/ToastContext";
+
+const TruckIcon = (
+  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16V6a1 1 0 011-1h9a1 1 0 011 1v10M3 16h11m0 0h2.5M3 16a2 2 0 104 0m10 0a2 2 0 104 0m-4 0h2m2 0V11h-4v-4h-2" />
+  </svg>
+);
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [product, setProduct] = useState(null);
+  const [loadError, setLoadError] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
   const [inWishlist, setInWishlist] = useState(false);
   const [inCart, setInCart] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [myOffer, setMyOffer] = useState(null);
+  const [activeImg, setActiveImg] = useState(0);
   const [orderData, setOrderData] = useState({
     quantity: 1,
     deliveryAddress: "",
@@ -23,7 +41,11 @@ const ProductDetail = () => {
   });
   const [relatedProducts, setRelatedProducts] = useState([]);
 
+  const toast = useToast();
   const userId = localStorage.getItem("userId");
+  // When present, the order being placed is a negotiated checkout at an agreed
+  // price — passed through to the API so the backend charges that price.
+  const activeOfferId = myOffer?.status === "Accepted" && !myOffer?.order ? myOffer._id : null;
 
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
@@ -91,6 +113,7 @@ const ProductDetail = () => {
         quantity: orderData.quantity,
         deliveryAddress: orderData.deliveryAddress,
         phone: orderData.phone,
+        ...(activeOfferId ? { offerId: activeOfferId } : {}),
       });
       alert("Order placed successfully!");
       setShowOrderModal(false);
@@ -101,13 +124,28 @@ const ProductDetail = () => {
     }
   };
 
+  const fetchMyOffer = async () => {
+    if (!userId) return;
+    try {
+      const { data } = await API.get(`/offers/product/${id}/mine`);
+      setMyOffer(data || null);
+    } catch (error) {
+      console.error("Failed to load offer:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        setLoadError(false);
         const response = await API.get(`/products/${id}`);
         setProduct(response.data);
+        addRecentlyViewed(response.data);
       } catch (error) {
         console.error("Error fetching product:", error);
+        // Surface a recoverable error instead of spinning forever (e.g. the
+        // product was deleted, a bad id, or the API is unreachable).
+        setLoadError(true);
       }
     };
 
@@ -129,8 +167,28 @@ const ProductDetail = () => {
     if (id) {
       fetchProduct();
       checkWishlistAndCart();
+      fetchMyOffer();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchMyOffer is stable for this id/user
   }, [id, userId]);
+
+  // "Buy Now" on a product card deep-links here with ?buyNow=1 to skip
+  // straight to checkout instead of making the shopper click Buy Now again.
+  useEffect(() => {
+    if (!product || searchParams.get("buyNow") !== "1") return;
+    const isOwnerNow =
+      userId === product.seller?._id?.toString() ||
+      userId === product.seller?._id ||
+      userId === product.seller?.toString();
+    if (userId && !isOwnerNow && !product.isSold && getStockStatus(product).inStock) {
+      setShowOrderModal(true);
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete("buyNow");
+    next.delete("offer");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once per product load; searchParams intentionally excluded to avoid re-triggering on our own cleanup
+  }, [product, userId]);
 
   useEffect(() => {
     if (!product?.category) return;
@@ -151,9 +209,44 @@ const ProductDetail = () => {
     fetchRelated();
   }, [product?.category, product?._id]);
 
+  if (loadError) {
+    return (
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center text-red-400">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold text-slate-800">Product unavailable</h1>
+          <p className="text-slate-500 mt-1.5">This product may have been removed, or we couldn&rsquo;t reach the server.</p>
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <button onClick={() => navigate(-1)} className="px-5 py-2.5 rounded-xl border-2 border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
+              Go back
+            </button>
+            <Link to="/" className="px-5 py-2.5 rounded-xl bg-brand-700 text-white text-sm font-semibold hover:bg-brand-800 transition">
+              Browse products
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!product) {
     return <PageSpinner label="Loading product..." />;
   }
+
+  const discount = getDiscount(product);
+  const stockStatus = getStockStatus(product);
+  const { rating, numReviews } = getRatingInfo(product);
+  const gallery = [product.image, ...(product.images || [])].filter(Boolean);
+  if (gallery.length === 0) gallery.push(getCategoryFallback(product.category));
+  const isNegotiable = product.pricingType === "NEGOTIABLE";
+  // Once the buyer has an accepted offer, checkout happens at the agreed price.
+  const effectivePrice = activeOfferId ? myOffer.agreedPrice : product.price;
+  const myOfferMeta = myOffer ? STATUS_META[myOffer.status] : null;
+  const myOfferActions = myOffer ? offerActions(myOffer, "buyer") : { canCheckout: false };
 
   const isOwner =
     userId === product.seller?._id?.toString() ||
@@ -193,8 +286,9 @@ const ProductDetail = () => {
               className="block w-full bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm cursor-zoom-in group"
             >
               <img
-                src={product.image}
+                src={gallery[activeImg] || gallery[0]}
                 alt={product.name}
+                onError={(e) => handleImageError(e, product.category)}
                 className="w-full h-[350px] sm:h-[450px] object-cover group-hover:scale-[1.02] transition-transform duration-300"
               />
             </button>
@@ -205,21 +299,66 @@ const ProductDetail = () => {
             >
               {product.isSold ? "Sold" : "Available"}
             </Badge>
+
+            {gallery.length > 1 && (
+              <div className="mt-3 flex gap-2">
+                {gallery.map((src, i) => (
+                  <button
+                    key={src + i}
+                    type="button"
+                    onClick={() => setActiveImg(i)}
+                    aria-label={`View image ${i + 1}`}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 shrink-0 transition ${
+                      activeImg === i ? "border-brand-700" : "border-transparent hover:border-slate-200"
+                    }`}
+                  >
+                    <img src={src} alt="" onError={(e) => handleImageError(e, product.category)} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Details Section */}
           <div className="flex flex-col">
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8 flex-1">
-              {/* Category Tag */}
-              <Badge variant="category" className="mb-3">{product.category}</Badge>
+              {/* Category + pricing type */}
+              <div className="mb-3 flex items-center gap-2">
+                <Badge variant="category">{product.category}</Badge>
+                {isNegotiable ? (
+                  <Badge variant="accent">Negotiable</Badge>
+                ) : (
+                  <Badge variant="neutral">Fixed price</Badge>
+                )}
+              </div>
 
               <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight">
                 {product.name}
               </h1>
 
-              <p className="text-3xl font-extrabold text-emerald-700 mt-4">
-                ₹{product.price.toLocaleString("en-IN")}
-              </p>
+              {rating > 0 && <StarRating rating={rating} numReviews={numReviews} size="md" className="mt-3" />}
+
+              <div className="mt-4 flex items-baseline gap-3 flex-wrap">
+                <p className="text-3xl font-extrabold text-emerald-700">{formatINR(product.price)}</p>
+                {discount.hasDiscount && (
+                  <>
+                    <span className="text-lg text-slate-400 line-through">{formatINR(discount.mrp)}</span>
+                    <span className="text-sm font-bold text-emerald-700">{discount.percent}% off</span>
+                  </>
+                )}
+              </div>
+
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <span className={stockStatus.tone === "out" ? "text-red-600 font-semibold" : stockStatus.tone === "low" ? "text-amber-600 font-semibold" : "text-emerald-700 font-medium"}>
+                  {stockStatus.label}
+                </span>
+                {stockStatus.inStock && !product.isSold && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span className="inline-flex items-center gap-1.5 text-slate-500">{TruckIcon}{getDeliveryLabel(product)}</span>
+                  </>
+                )}
+              </div>
 
               <div className="mt-6 border-t border-slate-100 pt-6">
                 <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Description</h3>
@@ -336,12 +475,59 @@ const ProductDetail = () => {
               {/* Buyer Actions */}
               {!isOwner && userId && !product.isSold && (
                 <div className="mt-6 flex flex-col gap-3">
-                  <button
-                    onClick={() => setShowOrderModal(true)}
-                    className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-900 to-brand-700 hover:from-brand-800 hover:to-brand-600 shadow-md hover:shadow-lg transition"
-                  >
-                    Buy Now
-                  </button>
+                  {/* Negotiation status / accepted-deal checkout */}
+                  {isNegotiable && myOffer && myOffer.status !== "Rejected" && (
+                    <div className="rounded-xl border border-brand-100 bg-brand-50 p-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-slate-800">
+                          Your offer: {formatINR(myOffer.amount)}
+                        </span>
+                        {myOfferMeta && <Badge variant={myOfferMeta.badge}>{myOfferMeta.label}</Badge>}
+                      </div>
+                      {myOffer.status === "Accepted" ? (
+                        <p className="mt-1 text-xs text-emerald-700 font-medium">
+                          Accepted at {formatINR(myOffer.agreedPrice)} — check out below to buy at this price.
+                        </p>
+                      ) : myOffer.status === "Countered" && myOffer.awaiting === "buyer" ? (
+                        <p className="mt-1 text-xs text-brand-700">
+                          Seller countered — <Link to="/offers" className="font-semibold underline">respond in Offers</Link>.
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Waiting for the seller. Track it in <Link to="/offers" className="font-semibold text-brand-700 underline">My Offers</Link>.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {myOfferActions.canCheckout ? (
+                    <button
+                      onClick={() => setShowOrderModal(true)}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-white bg-success-600 hover:bg-success-700 shadow-md hover:shadow-lg transition"
+                    >
+                      Checkout at agreed price · {formatINR(myOffer.agreedPrice)}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowOrderModal(true)}
+                      disabled={!stockStatus.inStock}
+                      className="w-full py-3 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-brand-900 to-brand-700 hover:from-brand-800 hover:to-brand-600 shadow-md hover:shadow-lg transition disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {stockStatus.inStock ? "Buy Now" : "Out of Stock"}
+                    </button>
+                  )}
+
+                  {/* Make an Offer — only for negotiable items without an open/accepted thread */}
+                  {isNegotiable && stockStatus.inStock &&
+                    (!myOffer || myOffer.status === "Rejected") && (
+                      <button
+                        onClick={() => setShowOfferModal(true)}
+                        className="w-full py-3 rounded-xl text-sm font-bold text-brand-700 border-2 border-brand-300 hover:bg-brand-50 transition"
+                      >
+                        💬 Make an Offer
+                      </button>
+                    )}
+
                   <div className="flex gap-3">
                     <button
                       onClick={toggleWishlist}
@@ -355,7 +541,8 @@ const ProductDetail = () => {
                     </button>
                     <button
                       onClick={toggleCart}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition ${
+                      disabled={!stockStatus.inStock}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition disabled:opacity-40 disabled:pointer-events-none ${
                         inCart
                           ? "text-brand-800 border-brand-200 bg-brand-50 hover:bg-brand-100"
                           : "text-slate-600 border-slate-200 hover:bg-slate-50"
@@ -399,8 +586,9 @@ const ProductDetail = () => {
             </svg>
           </button>
           <img
-            src={product.image}
+            src={gallery[activeImg] || gallery[0]}
             alt={product.name}
+            onError={(e) => handleImageError(e, product.category)}
             className="max-w-full max-h-full object-contain rounded-lg"
             onClick={(e) => e.stopPropagation()}
           />
@@ -468,9 +656,15 @@ const ProductDetail = () => {
               </div>
 
               <div className="bg-slate-50 rounded-lg p-4">
+                {activeOfferId && (
+                  <div className="flex justify-between text-xs mb-2 text-emerald-700 font-semibold">
+                    <span>Negotiated price</span>
+                    <span>Agreed offer applied</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-600">Price per item:</span>
-                  <span className="font-semibold">₹{product.price.toLocaleString("en-IN")}</span>
+                  <span className="font-semibold">{formatINR(effectivePrice)}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-slate-600">Quantity:</span>
@@ -478,7 +672,7 @@ const ProductDetail = () => {
                 </div>
                 <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-bold text-brand-900">
                   <span>Total:</span>
-                  <span>₹{(product.price * orderData.quantity).toLocaleString("en-IN")}</span>
+                  <span>{formatINR(effectivePrice * orderData.quantity)}</span>
                 </div>
               </div>
 
@@ -489,6 +683,17 @@ const ProductDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Make an Offer Modal */}
+      <MakeOfferModal
+        open={showOfferModal}
+        onClose={() => setShowOfferModal(false)}
+        product={product}
+        onSubmitted={(offer) => {
+          setMyOffer(offer);
+          toast.info("Your offer is pending the seller's response");
+        }}
+      />
     </div>
   );
 };

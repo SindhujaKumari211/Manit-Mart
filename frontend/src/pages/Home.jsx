@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import API from "../services/api";
+import HeroCarousel from "../components/HeroCarousel";
+import TrustBar from "../components/TrustBar";
 import CategoryCarousel from "../components/CategoryCarousel";
-import TrendingItems from "../components/TrendingItems";
+import ProductSection from "../components/ProductSection";
 import FreshListings from "../components/FreshListings";
-import RecommendedForStudents from "../components/RecommendedForStudents";
+import RecentlyViewed from "../components/RecentlyViewed";
 import ForYouSection from "../components/ForYouSection";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { SECTIONS } from "../lib/sections";
 
 const Home = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") || "");
   const [category, setCategory] = useState("");
@@ -27,17 +31,25 @@ const Home = () => {
     setSearchParams(value ? { search: value } : {}, { replace: true });
   };
 
+  const isSearching = search.trim().length > 0;
+  const hasActiveFilter = category || isSearching;
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        let query = "/products?limit=1100";
-        if (search) query += `&search=${search}`;
-        if (category && category !== "All") query += `&category=${category}`;
+        // Unfiltered browsing only needs a small preview (with a "See more"
+        // link to the full paginated /search page); an active search/category
+        // shows a slightly larger inline preview of matching results.
+        const previewLimit = hasActiveFilter ? 24 : 12;
+        let query = `/products?limit=${previewLimit}`;
+        if (search) query += `&search=${encodeURIComponent(search)}`;
+        if (category && category !== "All") query += `&category=${encodeURIComponent(category)}`;
         if (showSold) query += `&isSold=true`;
 
         const response = await API.get(query);
         setProducts(response.data.data.products);
+        setTotalProducts(response.data.data.totalProducts || 0);
       } catch (error) {
         console.error("ERROR:", error);
       } finally {
@@ -47,41 +59,52 @@ const Home = () => {
 
     const debounce = setTimeout(fetchProducts, 300);
     return () => clearTimeout(debounce);
-  }, [search, category, showSold]);
-
-  const isSearching = search.trim().length > 0;
-  const hasActiveFilter = category || isSearching;
+  }, [search, category, showSold, hasActiveFilter]);
 
   const clearFilters = () => {
     setCategory("");
     handleSearchChange("");
   };
 
-  const handleTrendingSelect = (value) => {
-    setCategory(value);
-    document.getElementById("listings")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <div className="min-h-screen bg-secondary-50">
+      {/* Hero carousel — hidden while searching/filtering so results lead */}
+      {!hasActiveFilter && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+          <ErrorBoundary variant="section" label="highlights">
+            <HeroCarousel />
+          </ErrorBoundary>
+        </div>
+      )}
+
       {/* Category Carousel */}
-      <div id="categories" className="scroll-mt-16">
+      <div id="categories" className="scroll-mt-16 mt-4">
         <ErrorBoundary variant="section" label="categories">
           <CategoryCarousel activeCategory={category} onSelect={setCategory} />
         </ErrorBoundary>
       </div>
 
-      {/* Trending Items (curated picks) */}
-      <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14">
-        <ErrorBoundary variant="section" label="trending">
-          <TrendingItems onSelectCategory={handleTrendingSelect} />
+      {/* Trust indicators */}
+      {!hasActiveFilter && (
+        <ErrorBoundary variant="section" label="trust">
+          <TrustBar />
         </ErrorBoundary>
-      </div>
+      )}
+
+      {/* Trending products */}
+      {!hasActiveFilter && (
+        <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pt-10 sm:pt-14">
+          <ErrorBoundary variant="section" label="trending">
+            <ProductSection section={SECTIONS.trending} />
+          </ErrorBoundary>
+        </div>
+      )}
 
       {/* Fresh Listings / Search Results */}
       <ErrorBoundary variant="section" label="listings">
         <FreshListings
           products={products}
+          totalProducts={totalProducts}
           loading={loading}
           hasActiveFilter={hasActiveFilter}
           category={category}
@@ -92,10 +115,35 @@ const Home = () => {
         />
       </ErrorBoundary>
 
+      {/* New Arrivals */}
+      {!hasActiveFilter && (
+        <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pt-8">
+          <ErrorBoundary variant="section" label="new arrivals">
+            <ProductSection section={SECTIONS["new-arrivals"]} />
+          </ErrorBoundary>
+        </div>
+      )}
+
       {/* Recommended For Students (curated picks) */}
-      <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pb-14 sm:pb-20">
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pt-8 pb-4">
         <ErrorBoundary variant="section" label="recommendations">
-          <RecommendedForStudents />
+          <ProductSection section={SECTIONS.recommended} />
+        </ErrorBoundary>
+      </div>
+
+      {/* Budget Deals */}
+      {!hasActiveFilter && (
+        <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pt-8">
+          <ErrorBoundary variant="section" label="deals">
+            <ProductSection section={SECTIONS.deals} />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {/* Continue where you left off (recently viewed) */}
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 lg:px-16 pb-14 sm:pb-20">
+        <ErrorBoundary variant="section" label="recently viewed">
+          <RecentlyViewed />
         </ErrorBoundary>
       </div>
 

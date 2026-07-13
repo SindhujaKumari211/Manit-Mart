@@ -3,8 +3,17 @@ import { useState } from "react";
 import API from "../services/api";
 import Badge from "./ui/Badge";
 import Modal from "./ui/Modal";
+import StarRating from "./ui/StarRating";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
+import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR } from "../lib/productDisplay";
+import { handleImageError, productImage } from "../lib/categoryImages";
+
+const TruckIcon = (
+  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16V6a1 1 0 011-1h9a1 1 0 011 1v10M3 16h11m0 0h2.5M3 16a2 2 0 104 0m10 0a2 2 0 104 0m-4 0h2m2 0V11h-4v-4h-2" />
+  </svg>
+);
 
 const ShareIcon = (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -22,6 +31,14 @@ const ProductCard = ({ product }) => {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [heartPulse, setHeartPulse] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const [activeImg, setActiveImg] = useState(0);
+
+  const gallery = [product.image, ...(product.images || [])].filter(Boolean);
+  const discount = getDiscount(product);
+  const stockStatus = getStockStatus(product);
+  const { rating, numReviews } = getRatingInfo(product);
+  const canTransact = !isOwner && !product.isSold && userId && stockStatus.inStock;
 
   const toggleWishlist = (e) => {
     e.preventDefault();
@@ -77,15 +94,25 @@ const ProductCard = ({ product }) => {
       }`}
     >
       {/* Image */}
-      <Link to={product.isSold ? "#" : `/product/${product._id}`} className="block">
+      <Link
+        to={product.isSold ? "#" : `/product/${product._id}`}
+        className="block"
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
+      >
         <div className="relative overflow-hidden bg-secondary-100">
           <img
-            src={product.image}
+            src={hovering && gallery[1] ? gallery[1] : productImage(product)}
             alt={product.name}
             loading="lazy"
-            onError={(e) => { e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23f1f5f9'/%3E%3C/svg%3E"; }}
+            onError={(e) => handleImageError(e, product.category)}
             className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition-transform duration-500"
           />
+          {gallery.length > 1 && (
+            <span className="absolute bottom-3 left-3 z-10 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-secondary-900/60 text-white">
+              1/{gallery.length}
+            </span>
+          )}
           {product.isSold && (
             <div className="absolute inset-0 bg-secondary-900/25 flex items-center justify-center">
               <span className="text-white font-bold text-lg bg-error-500/80 px-4 py-1 rounded-full">SOLD</span>
@@ -183,14 +210,38 @@ const ProductCard = ({ product }) => {
 
           <div className="mt-1.5 flex items-center gap-2">
             <Badge variant="category">{product.category}</Badge>
+            {product.pricingType === "NEGOTIABLE" && <Badge variant="accent">Negotiable</Badge>}
             <span className="text-xs text-muted">
               {product.department}
             </span>
           </div>
 
-          <p className="text-2xl font-bold text-text-primary mt-3">
-            ₹{product.price.toLocaleString("en-IN")}
-          </p>
+          {rating > 0 && <StarRating rating={rating} numReviews={numReviews} className="mt-2" />}
+
+          <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+            <p className="text-2xl font-bold text-text-primary">{formatINR(product.price)}</p>
+            {discount.hasDiscount && (
+              <>
+                <span className="text-sm text-muted line-through">{formatINR(discount.mrp)}</span>
+                <span className="text-xs font-bold text-success-700">{discount.percent}% off</span>
+              </>
+            )}
+          </div>
+
+          <div className="mt-1.5 flex items-center gap-2 text-xs">
+            <span className={stockStatus.tone === "out" ? "text-error-600 font-semibold" : stockStatus.tone === "low" ? "text-warning-600 font-semibold" : "text-success-700"}>
+              {stockStatus.label}
+            </span>
+            {stockStatus.inStock && !product.isSold && (
+              <>
+                <span className="text-secondary-300">•</span>
+                <span className="inline-flex items-center gap-1 text-text-secondary">
+                  {TruckIcon}
+                  {getDeliveryLabel(product)}
+                </span>
+              </>
+            )}
+          </div>
 
           <div className="mt-2 flex items-center gap-1.5 text-xs text-text-secondary">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -223,43 +274,89 @@ const ProductCard = ({ product }) => {
           </button>
         )}
 
-        {/* Add to Cart (non-owner, available products only) */}
+        {/* Add to Cart / Buy Now (non-owner, available products only) */}
         {!isOwner && !product.isSold && userId && (
-          <button
-            onClick={toggleCart}
-            aria-pressed={inCart}
-            className={`mt-4 w-full flex items-center justify-center gap-1.5 py-2 text-xs font-semibold border rounded-lg transition ${
-              inCart
-                ? "bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
-                : "text-text-secondary border-border hover:bg-secondary-50"
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            {inCart ? "Remove from Cart" : "Add to Cart"}
-          </button>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              onClick={toggleCart}
+              disabled={!stockStatus.inStock}
+              aria-pressed={inCart}
+              className={`flex items-center justify-center gap-1.5 py-2 text-xs font-semibold border rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
+                inCart
+                  ? "bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
+                  : "text-text-secondary border-border hover:bg-secondary-50"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              {inCart ? "In Cart" : "Add to Cart"}
+            </button>
+            <Link
+              to={canTransact ? `/product/${product._id}?buyNow=1` : `/product/${product._id}`}
+              className={`flex items-center justify-center py-2 text-xs font-semibold rounded-lg transition ${
+                canTransact
+                  ? "bg-brand-700 text-white hover:bg-brand-800"
+                  : "bg-secondary-100 text-secondary-400 pointer-events-none"
+              }`}
+            >
+              Buy Now
+            </Link>
+          </div>
         )}
       </div>
 
       {/* Quick View Modal */}
-      <Modal open={quickViewOpen} onClose={() => setQuickViewOpen(false)} title={product.name}>
+      <Modal open={quickViewOpen} onClose={() => { setQuickViewOpen(false); setActiveImg(0); }} title={product.name}>
         <div className="relative overflow-hidden bg-secondary-100">
           <img
-            src={product.image}
+            src={gallery[activeImg] || productImage(product)}
             alt={product.name}
+            onError={(e) => handleImageError(e, product.category)}
             className="w-full aspect-[4/3] object-cover"
           />
         </div>
+        {gallery.length > 1 && (
+          <div className="flex gap-2 px-5 pt-3">
+            {gallery.map((src, i) => (
+              <button
+                key={src + i}
+                onClick={() => setActiveImg(i)}
+                className={`w-14 h-14 rounded-lg overflow-hidden border-2 shrink-0 ${activeImg === i ? "border-brand-600" : "border-transparent"}`}
+                aria-label={`View image ${i + 1}`}
+              >
+                <img src={src} alt="" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
         <div className="p-5">
           <div className="flex items-center gap-2 mb-2">
             <Badge variant={product.condition === "New" ? "new" : "used"}>{product.condition}</Badge>
             <Badge variant="category">{product.category}</Badge>
           </div>
           <h3 className="text-xl font-bold text-text-primary">{product.name}</h3>
-          <p className="text-2xl font-bold text-text-primary mt-2">
-            ₹{product.price.toLocaleString("en-IN")}
-          </p>
+          {rating > 0 && <StarRating rating={rating} numReviews={numReviews} className="mt-2" />}
+          <div className="mt-2 flex items-baseline gap-2 flex-wrap">
+            <p className="text-2xl font-bold text-text-primary">{formatINR(product.price)}</p>
+            {discount.hasDiscount && (
+              <>
+                <span className="text-sm text-muted line-through">{formatINR(discount.mrp)}</span>
+                <span className="text-xs font-bold text-success-700">{discount.percent}% off</span>
+              </>
+            )}
+          </div>
+          <div className="mt-1.5 flex items-center gap-2 text-xs">
+            <span className={stockStatus.tone === "out" ? "text-error-600 font-semibold" : stockStatus.tone === "low" ? "text-warning-600 font-semibold" : "text-success-700"}>
+              {stockStatus.label}
+            </span>
+            {stockStatus.inStock && !product.isSold && (
+              <>
+                <span className="text-secondary-300">•</span>
+                <span className="inline-flex items-center gap-1 text-text-secondary">{TruckIcon}{getDeliveryLabel(product)}</span>
+              </>
+            )}
+          </div>
           <div className="mt-2 text-sm text-text-secondary">
             Sold by <span className="font-medium text-text-primary">{product.seller?.name || "Seller"}</span>
             {product.hostel && <> • {product.hostel}</>}
@@ -275,7 +372,8 @@ const ProductCard = ({ product }) => {
             {!isOwner && !product.isSold && userId && (
               <button
                 onClick={toggleCart}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition ${
+                disabled={!stockStatus.inStock}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
                   inCart
                     ? "bg-brand-50 text-brand-800 border-2 border-brand-200 hover:bg-brand-100"
                     : "bg-brand-700 text-white hover:bg-brand-800"
@@ -285,6 +383,15 @@ const ProductCard = ({ product }) => {
               </button>
             )}
           </div>
+          {canTransact && (
+            <Link
+              to={`/product/${product._id}?buyNow=1`}
+              onClick={() => setQuickViewOpen(false)}
+              className="mt-3 block text-center py-2.5 text-sm font-semibold rounded-lg border-2 border-brand-700 text-brand-700 hover:bg-brand-50 transition"
+            >
+              Buy Now
+            </Link>
+          )}
         </div>
       </Modal>
     </div>

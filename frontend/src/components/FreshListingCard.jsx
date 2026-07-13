@@ -2,18 +2,21 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import API from "../services/api";
 import Badge from "./ui/Badge";
+import StarRating from "./ui/StarRating";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
+import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR } from "../lib/productDisplay";
+import { handleImageError, productImage } from "../lib/categoryImages";
+
+const TruckIcon = (
+  <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16V6a1 1 0 011-1h9a1 1 0 011 1v10M3 16h11m0 0h2.5M3 16a2 2 0 104 0m10 0a2 2 0 104 0m-4 0h2m2 0V11h-4v-4h-2" />
+  </svg>
+);
 
 const ShareIcon = (
   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342a4 4 0 100-2.684m0 2.684a4 4 0 100 2.684m0-2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a4 4 0 105.367-2.7 4 4 0 00-5.367 2.7zm0 10.658a4 4 0 105.367 2.7 4 4 0 00-5.367-2.7z" />
-  </svg>
-);
-
-const PackageIcon = (
-  <svg className="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 7.5l-8.25 4.5L3.75 7.5M20.25 7.5l-8.25-4.5L3.75 7.5M20.25 7.5v9l-8.25 4.5M3.75 7.5v9l8.25 4.5M12 21v-9" />
   </svg>
 );
 
@@ -31,6 +34,13 @@ const FreshListingCard = ({ product }) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const [heartPulse, setHeartPulse] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  const gallery = [product.image, ...(product.images || [])].filter(Boolean);
+  const discount = getDiscount(product);
+  const stockStatus = getStockStatus(product);
+  const { rating, numReviews } = getRatingInfo(product);
+  const canTransact = !isOwner && !product.isSold && userId && stockStatus.inStock;
 
   const toggleWishlist = (e) => {
     e.preventDefault();
@@ -77,32 +87,26 @@ const FreshListingCard = ({ product }) => {
   };
 
   const detailHref = product.isSold ? "#" : `/product/${product._id}`;
-  const showImage = product.image && !imgFailed;
 
   return (
-    <div className="w-80 h-[430px] shrink-0 flex flex-col bg-card rounded-[20px] border border-border shadow-soft overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 focus-within:shadow-xl focus-within:-translate-y-1.5">
+    <div className="w-80 h-[500px] shrink-0 flex flex-col bg-card rounded-[20px] border border-border shadow-soft overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 focus-within:shadow-xl focus-within:-translate-y-1.5">
       {/* Image */}
       <Link
         to={detailHref}
-        className="relative block h-[220px] w-full shrink-0 bg-secondary-100 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        className="relative block h-[190px] w-full shrink-0 bg-secondary-100 overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        onMouseEnter={() => setHovering(true)}
+        onMouseLeave={() => setHovering(false)}
       >
-        {showImage ? (
-          <img
-            src={product.image}
-            alt={product.name}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => setImgFailed(true)}
-            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
-              imgLoaded ? "opacity-100" : "opacity-0"
-            }`}
-          />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-secondary-400 bg-secondary-100">
-            {PackageIcon}
-            <span className="text-xs font-medium">No Image Available</span>
-          </div>
-        )}
+        <img
+          src={hovering && gallery[1] ? gallery[1] : productImage(product)}
+          alt={product.name}
+          loading="lazy"
+          onLoad={() => setImgLoaded(true)}
+          onError={(e) => { setImgFailed(true); handleImageError(e, product.category); }}
+          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-500 ${
+            imgLoaded || imgFailed ? "opacity-100" : "opacity-0"
+          }`}
+        />
 
         {product.isSold && (
           <div className="absolute inset-0 bg-secondary-900/25 flex items-center justify-center">
@@ -188,11 +192,32 @@ const FreshListingCard = ({ product }) => {
 
         <div className="mt-2 flex items-center gap-2">
           <Badge variant="category">{product.category}</Badge>
+          {product.pricingType === "NEGOTIABLE" && <Badge variant="accent">Negotiable</Badge>}
         </div>
 
-        <p className="text-xl font-bold text-text-primary mt-2">
-          ₹{product.price.toLocaleString("en-IN")}
-        </p>
+        {rating > 0 && <StarRating rating={rating} numReviews={numReviews} className="mt-1.5" />}
+
+        <div className="mt-1.5 flex items-baseline gap-1.5 flex-wrap">
+          <p className="text-xl font-bold text-text-primary">{formatINR(product.price)}</p>
+          {discount.hasDiscount && (
+            <>
+              <span className="text-xs text-muted line-through">{formatINR(discount.mrp)}</span>
+              <span className="text-[11px] font-bold text-success-700">{discount.percent}% off</span>
+            </>
+          )}
+        </div>
+
+        <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+          <span className={stockStatus.tone === "out" ? "text-error-600 font-semibold" : stockStatus.tone === "low" ? "text-warning-600 font-semibold" : "text-success-700"}>
+            {stockStatus.label}
+          </span>
+          {stockStatus.inStock && !product.isSold && (
+            <>
+              <span className="text-secondary-300">•</span>
+              <span className="inline-flex items-center gap-1 text-text-secondary">{TruckIcon}{getDeliveryLabel(product)}</span>
+            </>
+          )}
+        </div>
 
         <div className="mt-1.5 flex items-center gap-1.5 text-xs text-text-secondary truncate">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +236,7 @@ const FreshListingCard = ({ product }) => {
         {isOwner ? (
           <button
             onClick={handleMarkSold}
-            className={`h-11 w-full text-sm font-semibold rounded-xl border-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+            className={`h-10 w-full text-sm font-semibold rounded-xl border-2 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
               product.isSold
                 ? "text-success-700 border-success-300 hover:bg-success-50"
                 : "text-error-600 border-error-200 hover:bg-error-50"
@@ -220,24 +245,35 @@ const FreshListingCard = ({ product }) => {
             {product.isSold ? "Mark as Available" : "Mark as Sold"}
           </button>
         ) : !product.isSold && userId ? (
-          <button
-            onClick={toggleCart}
-            aria-pressed={inCart}
-            className={`h-11 w-full flex items-center justify-center gap-1.5 text-sm font-semibold rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-              inCart
-                ? "bg-brand-50 text-brand-800 border-2 border-brand-200 hover:bg-brand-100"
-                : "bg-brand-700 text-white hover:bg-brand-800"
-            }`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            {inCart ? "Remove from Cart" : "Add to Cart"}
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={toggleCart}
+              disabled={!stockStatus.inStock}
+              aria-pressed={inCart}
+              className={`h-10 w-full flex items-center justify-center gap-1.5 text-xs font-semibold rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-40 disabled:pointer-events-none ${
+                inCart
+                  ? "bg-brand-50 text-brand-800 border-2 border-brand-200 hover:bg-brand-100"
+                  : "border-2 border-border text-text-secondary hover:bg-secondary-50"
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              {inCart ? "In Cart" : "Add to Cart"}
+            </button>
+            <Link
+              to={canTransact ? `${detailHref}?buyNow=1` : detailHref}
+              className={`h-10 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                canTransact ? "bg-brand-700 text-white hover:bg-brand-800" : "bg-secondary-100 text-secondary-400 pointer-events-none"
+              }`}
+            >
+              Buy Now
+            </Link>
+          </div>
         ) : (
           <Link
             to={detailHref}
-            className="h-11 w-full flex items-center justify-center text-sm font-semibold rounded-xl border-2 border-border text-text-secondary hover:bg-secondary-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="h-10 w-full flex items-center justify-center text-sm font-semibold rounded-xl border-2 border-border text-text-secondary hover:bg-secondary-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             View Details
           </Link>
@@ -248,15 +284,16 @@ const FreshListingCard = ({ product }) => {
 };
 
 export const FreshListingCardSkeleton = () => (
-  <div className="w-80 h-[430px] shrink-0 bg-card rounded-[20px] border border-border shadow-soft overflow-hidden animate-pulse">
-    <div className="h-[220px] bg-secondary-200" />
+  <div className="w-80 h-[500px] shrink-0 bg-card rounded-[20px] border border-border shadow-soft overflow-hidden animate-pulse">
+    <div className="h-[190px] bg-secondary-200" />
     <div className="p-4 space-y-3">
       <div className="h-4 bg-secondary-200 rounded w-3/4" />
       <div className="h-4 bg-secondary-200 rounded w-1/2" />
       <div className="h-3 bg-secondary-200 rounded w-1/3" />
       <div className="h-6 bg-secondary-200 rounded w-2/5" />
+      <div className="h-3 bg-secondary-200 rounded w-1/3" />
       <div className="h-3 bg-secondary-200 rounded w-2/3" />
-      <div className="h-11 bg-secondary-200 rounded-xl mt-4" />
+      <div className="h-10 bg-secondary-200 rounded-xl mt-4" />
     </div>
   </div>
 );

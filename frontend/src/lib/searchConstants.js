@@ -8,6 +8,7 @@ export const CATEGORIES = [
   "Books",
   "Notes",
   "Electronics",
+  "Gadgets",
   "Laptops",
   "Mobiles",
   "Cycles",
@@ -59,6 +60,7 @@ export const SORT_OPTIONS = [
   { value: "price_desc", label: "Price: High to Low" },
   { value: "rating", label: "Rating" },
   { value: "newest", label: "Newest" },
+  { value: "discount", label: "Biggest Discount" },
 ];
 
 // Quick price buckets for the sidebar (min/max in ₹; null = open-ended).
