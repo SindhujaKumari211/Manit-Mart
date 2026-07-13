@@ -39,6 +39,7 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Help from "./pages/Help";
+import Chats from "./pages/Chats";
 
 // Route content wrapped in an error boundary that resets on navigation (keyed
 // by pathname), so a crash on one page never takes down the navbar/footer and
@@ -81,6 +82,7 @@ function RoutedContent() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/orders" element={<Orders />} />
+          <Route path="/chats" element={<Chats />} />
           <Route
             path="/offers"
             element={

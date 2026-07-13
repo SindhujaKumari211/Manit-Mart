@@ -12,6 +12,7 @@ import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR
 import { handleImageError, getCategoryFallback } from "../lib/categoryImages";
 import { STATUS_META, offerActions } from "../lib/offers";
 import { useToast } from "../context/ToastContext";
+import ProductChat from "../components/ProductChat";
 
 const TruckIcon = (
   <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,6 +33,7 @@ const ProductDetail = () => {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [showImageZoom, setShowImageZoom] = useState(false);
   const [showOfferModal, setShowOfferModal] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [myOffer, setMyOffer] = useState(null);
   const [activeImg, setActiveImg] = useState(0);
   const [orderData, setOrderData] = useState({
@@ -437,6 +439,22 @@ const ProductDetail = () => {
                     </div>
                   </div>
 
+                  {userId && (
+                    <div className="pt-1">
+                      <button
+                        onClick={() => setShowChat(true)}
+                        className="w-full py-3 rounded-xl text-sm font-bold text-white bg-brand-700 hover:bg-brand-800 transition"
+                      >
+                        {isOwner ? "View buyer messages" : product.isSold ? "View chat history" : "Chat with seller"}
+                      </button>
+                      <p className="mt-2 text-xs text-slate-500">
+                        {isOwner
+                          ? "Open every buyer thread for this product."
+                          : "Reopen this product's conversation and older messages anytime."}
+                      </p>
+                    </div>
+                  )}
+
                 </div>
               </div>
 
@@ -528,6 +546,8 @@ const ProductDetail = () => {
                       </button>
                     )}
 
+                  <button onClick={() => setShowChat(true)} className="w-full py-3 rounded-xl text-sm font-bold text-brand-700 border-2 border-brand-300 hover:bg-brand-50 transition">💬 Chat with seller</button>
+
                   <div className="flex gap-3">
                     <button
                       onClick={toggleWishlist}
@@ -594,6 +614,7 @@ const ProductDetail = () => {
           />
         </div>
       )}
+      {showChat && <ProductChat product={product} isSeller={isOwner} onClose={() => setShowChat(false)} />}
 
       {/* Order Modal */}
       {showOrderModal && (
@@ -610,6 +631,7 @@ const ProductDetail = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+
             </div>
 
             <form onSubmit={handleOrder} className="space-y-4">
