@@ -6,6 +6,8 @@ import API from "../services/api";
 import Logo from "./ui/Logo";
 import SearchBar from "./SearchBar";
 import NotificationBell from "./NotificationBell";
+import CollegeSelector from "./CollegeSelector";
+import { getCollege } from "../lib/college";
 
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2";
@@ -64,6 +66,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn, logout } = useAuth();
+  const college = getCollege();
   const { count: wishlistCount } = useWishlist();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -164,7 +167,7 @@ const Navbar = () => {
             >
               <Logo className="w-9 h-9 shrink-0" />
               <span className="text-lg font-bold text-text-primary hidden sm:block tracking-tight">
-                Manit<span className="text-accent-500">Mart</span>
+                {college.name}<span className="text-accent-500">Mart</span>
               </span>
             </Link>
 
@@ -175,6 +178,7 @@ const Navbar = () => {
 
             {/* Desktop right-side actions */}
             <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
+              <CollegeSelector className="mr-2" />
               <NavLink to="/" active={isActive("/")}>Home</NavLink>
 
               {isLoggedIn ? (
@@ -343,7 +347,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16 px-4 border-b border-border shrink-0">
           <span className="flex items-center gap-2 text-lg font-bold text-text-primary">
             <Logo className="w-8 h-8 shrink-0" />
-            Manit<span className="text-accent-500">Mart</span>
+            {college.name}<span className="text-accent-500">Mart</span>
           </span>
           <button
             onClick={() => setMenuOpen(false)}
@@ -358,6 +362,7 @@ const Navbar = () => {
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <SearchBar onNavigate={() => setMenuOpen(false)} />
+          <CollegeSelector />
 
           <div className="space-y-1">
             <Link

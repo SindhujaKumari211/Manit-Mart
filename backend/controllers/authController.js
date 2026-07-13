@@ -1,4 +1,3 @@
-const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 
@@ -12,6 +11,7 @@ const generateToken = (id) => {
 // ================= REGISTER =================
 exports.registerUser = async (req, res) => {
   try {
+    const { User } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -50,6 +50,7 @@ exports.registerUser = async (req, res) => {
 // ================= UPDATE PROFILE =================
 exports.updateProfile = async (req, res) => {
   try {
+    const { User } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -81,6 +82,7 @@ exports.updateProfile = async (req, res) => {
 // ================= LOGIN =================
 exports.loginUser = async (req, res) => {
   try {
+    const { User } = req.models;
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });

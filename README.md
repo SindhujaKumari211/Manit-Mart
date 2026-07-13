@@ -56,6 +56,14 @@ are missing, rather than failing confusingly later.
 The API is served at `http://localhost:5000/api`, with uploaded images served statically
 at `http://localhost:5000/uploads/...`. A health check is available at `GET /api/health`.
 
+### College database routing
+
+The application uses one Atlas cluster and one Mongoose connection. Each API request is
+scoped by the `X-College` header: `manit` maps to `college_notes` and `bhu` maps to `bhu`.
+The server switches logical databases using `mongoose.connection.useDb()`; it never opens a
+second cluster connection. The web app stores the selected college locally and sends this
+header automatically. Unsupported values return `400`.
+
 ### 2. Frontend
 
 ```bash

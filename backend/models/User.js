@@ -67,6 +67,6 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const User = mongoose.model("User", userSchema);
-
-module.exports = User;
+// Models are registered on a request-selected database connection. Reuse a
+// registered model because useDb() may return the same connection repeatedly.
+module.exports = (db) => db.models.User || db.model("User", userSchema);

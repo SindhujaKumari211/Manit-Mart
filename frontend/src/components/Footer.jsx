@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./ui/Logo";
+import { getCollege } from "../lib/college";
 
 /* Link columns. Informational / policy / support links point at the Help
    center (the single info hub that exists) so nothing dead-ends; functional
@@ -83,7 +84,7 @@ const SOCIALS = [
   },
 ];
 
-const NewsletterForm = () => {
+const NewsletterForm = ({ emailDomain }) => {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
 
@@ -120,7 +121,7 @@ const NewsletterForm = () => {
         required
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        placeholder="you@manit.ac.in"
+        placeholder={`you@${emailDomain}`}
         className="flex-1 px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm text-text-primary placeholder-muted focus:outline-none focus:border-brand-500 transition"
       />
       <button
@@ -144,7 +145,10 @@ const FooterLink = ({ link }) =>
     </Link>
   );
 
-const Footer = () => (
+const Footer = () => {
+  const college = getCollege();
+  const columns = COLUMNS.map((column, index) => index === 0 ? { ...column, title: college.marketplaceName } : column);
+  return (
   <footer className="bg-secondary-50 border-t border-border">
     <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 pt-14 pb-8">
       {/* Top: brand + newsletter */}
@@ -153,11 +157,11 @@ const Footer = () => (
           <div className="flex items-center gap-2 mb-3">
             <Logo className="w-9 h-9 shrink-0" />
             <span className="text-lg font-bold text-text-primary">
-              Manit<span className="text-accent-500">Mart</span>
+              {college.name}<span className="text-accent-500">Mart</span>
             </span>
           </div>
           <p className="text-sm leading-relaxed text-text-secondary max-w-xs">
-            The trusted student marketplace for MANIT — buy and sell books, electronics,
+            The trusted student marketplace for {college.name} — buy and sell books, electronics,
             hostel essentials and more, safely within your campus.
           </p>
           {/* Trust badges */}
@@ -184,14 +188,14 @@ const Footer = () => (
             Subscribe for fresh listings, budget deals and campus offers — no spam, just good finds.
           </p>
           <div className="max-w-md">
-            <NewsletterForm />
+            <NewsletterForm emailDomain={college.emailDomain} />
           </div>
         </div>
       </div>
 
       {/* Link columns */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 py-12">
-        {COLUMNS.map((col) => (
+        {columns.map((col) => (
           <nav key={col.title} aria-label={col.title}>
             <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider mb-4">
               {col.title}
@@ -210,9 +214,9 @@ const Footer = () => (
       {/* Bottom bar */}
       <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-5">
         <p className="text-xs text-muted order-2 sm:order-1 text-center sm:text-left">
-          © {new Date().getFullYear()} Manit Mart. All rights reserved.
+          © {new Date().getFullYear()} {college.marketplaceName}. All rights reserved.
           <span className="mx-2 text-secondary-300">•</span>
-          Built with <span aria-hidden="true">❤️</span> for MANIT Students
+          Built with <span aria-hidden="true">❤️</span> for {college.name} Students
         </p>
 
         {/* Socials */}
@@ -235,6 +239,7 @@ const Footer = () => (
       </div>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;

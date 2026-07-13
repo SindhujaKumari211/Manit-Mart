@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { WishlistProvider } from "./context/WishlistContext";
@@ -17,6 +17,7 @@ const ForYouPage = lazy(() => import("./pages/ForYouPage"));
 const OffersPage = lazy(() => import("./pages/OffersPage"));
 
 import { SECTIONS } from "./lib/sections";
+import { getCollege } from "./lib/college";
 
 // Code-split the results page — it's a heavy, secondary route.
 const SearchResults = lazy(() => import("./pages/SearchResults"));
@@ -96,6 +97,10 @@ function RoutedContent() {
 }
 
 function App() {
+  useEffect(() => {
+    document.title = getCollege().marketplaceName;
+  }, []);
+
   return (
     <ToastProvider>
     <AuthProvider>

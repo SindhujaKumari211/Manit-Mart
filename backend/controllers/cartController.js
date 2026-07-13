@@ -1,10 +1,9 @@
-const Cart = require("../models/Cart");
-const Product = require("../models/Product");
 const { validationResult } = require("express-validator");
 
 // ================= GET USER CART =================
 exports.getCart = async (req, res) => {
   try {
+    const { Cart } = req.models;
     const cartItems = await Cart.find({ user: req.user._id })
       .populate({
         path: "product",
@@ -29,6 +28,7 @@ exports.getCart = async (req, res) => {
 // ================= ADD TO CART =================
 exports.addToCart = async (req, res) => {
   try {
+    const { Cart, Product } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -89,6 +89,7 @@ exports.addToCart = async (req, res) => {
 // ================= UPDATE CART QUANTITY =================
 exports.updateCartQuantity = async (req, res) => {
   try {
+    const { Cart } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -119,6 +120,7 @@ exports.updateCartQuantity = async (req, res) => {
 // ================= REMOVE FROM CART =================
 exports.removeFromCart = async (req, res) => {
   try {
+    const { Cart } = req.models;
     const { productId } = req.params;
 
     const result = await Cart.findOneAndDelete({
@@ -139,6 +141,7 @@ exports.removeFromCart = async (req, res) => {
 // ================= CLEAR CART =================
 exports.clearCart = async (req, res) => {
   try {
+    const { Cart } = req.models;
     await Cart.deleteMany({ user: req.user._id });
     res.json({ message: "Cart cleared" });
   } catch (error) {

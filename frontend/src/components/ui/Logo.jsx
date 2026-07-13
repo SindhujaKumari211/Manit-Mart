@@ -12,7 +12,7 @@
 const NAVY = "#1C3A5E";
 const ORANGE = "#F59E0B";
 
-const Logo = ({ className = "w-9 h-9", title = "Manit-Mart", ...props }) => (
+const Logo = ({ className = "w-9 h-9", title = "Campus marketplace", ...props }) => (
   <svg
     viewBox="0 0 120 120"
     className={className}

@@ -40,7 +40,7 @@ export function getCategoryFallback(category) {
     <rect width='800' height='600' fill='url(#g)'/>
     <circle cx='400' cy='250' r='70' fill='hsl(${hue},55%,55%)' opacity='0.35'/>
     <text x='400' y='265' font-family='Segoe UI, Arial, sans-serif' font-size='44' font-weight='700' fill='hsl(${hue},45%,32%)' text-anchor='middle'>${label}</text>
-    <text x='400' y='320' font-family='Segoe UI, Arial, sans-serif' font-size='22' fill='hsl(${hue},35%,42%)' text-anchor='middle'>Manit Mart</text>
+    <text x='400' y='320' font-family='Segoe UI, Arial, sans-serif' font-size='22' fill='hsl(${hue},35%,42%)' text-anchor='middle'>Campus Mart</text>
   </svg>`;
   const uri = `data:image/svg+xml,${encodeURIComponent(svg)}`;
   cache.set(key, uri);

@@ -1,10 +1,9 @@
-const Wishlist = require("../models/Wishlist");
-const Product = require("../models/Product");
 const { validationResult } = require("express-validator");
 
 // ================= GET USER WISHLIST =================
 exports.getWishlist = async (req, res) => {
   try {
+    const { Wishlist } = req.models;
     const wishlistItems = await Wishlist.find({ user: req.user._id })
       .populate({
         path: "product",
@@ -28,6 +27,7 @@ exports.getWishlist = async (req, res) => {
 // ================= ADD TO WISHLIST =================
 exports.addToWishlist = async (req, res) => {
   try {
+    const { Wishlist, Product } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -72,6 +72,7 @@ exports.addToWishlist = async (req, res) => {
 // ================= REMOVE FROM WISHLIST =================
 exports.removeFromWishlist = async (req, res) => {
   try {
+    const { Wishlist } = req.models;
     const { productId } = req.params;
 
     const result = await Wishlist.findOneAndDelete({
@@ -92,6 +93,7 @@ exports.removeFromWishlist = async (req, res) => {
 // ================= CHECK IF IN WISHLIST =================
 exports.checkWishlist = async (req, res) => {
   try {
+    const { Wishlist } = req.models;
     const { productId } = req.params;
 
     const item = await Wishlist.findOne({

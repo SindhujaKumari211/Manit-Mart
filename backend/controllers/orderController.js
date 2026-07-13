@@ -1,11 +1,9 @@
-const Order = require("../models/Order");
-const Product = require("../models/Product");
-const Cart = require("../models/Cart");
 const { validationResult } = require("express-validator");
 
 // ================= CREATE ORDER =================
 exports.createOrder = async (req, res) => {
   try {
+    const { Order, Product, Cart } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ message: "Validation failed", errors: errors.array() });
@@ -82,6 +80,7 @@ exports.createOrder = async (req, res) => {
 // ================= GET USER ORDERS (AS BUYER) =================
 exports.getMyOrders = async (req, res) => {
   try {
+    const { Order } = req.models;
     const orders = await Order.find({ buyer: req.user._id })
       .populate("seller", "name email phone")
       .populate("product")
@@ -96,6 +95,7 @@ exports.getMyOrders = async (req, res) => {
 // ================= GET SELLER ORDERS =================
 exports.getSellerOrders = async (req, res) => {
   try {
+    const { Order } = req.models;
     const orders = await Order.find({ seller: req.user._id })
       .populate("buyer", "name email phone")
       .populate("product")
@@ -110,6 +110,7 @@ exports.getSellerOrders = async (req, res) => {
 // ================= UPDATE ORDER STATUS =================
 exports.updateOrderStatus = async (req, res) => {
   try {
+    const { Order, Product } = req.models;
     const { orderId } = req.params;
     const { status } = req.body;
 
@@ -150,6 +151,7 @@ exports.updateOrderStatus = async (req, res) => {
 // ================= CANCEL ORDER (buyer or seller) =================
 exports.cancelOrder = async (req, res) => {
   try {
+    const { Order, Product } = req.models;
     const { orderId } = req.params;
 
     const order = await Order.findById(orderId);
@@ -188,6 +190,7 @@ exports.cancelOrder = async (req, res) => {
 // ================= GET SINGLE ORDER =================
 exports.getSingleOrder = async (req, res) => {
   try {
+    const { Order } = req.models;
     const { orderId } = req.params;
 
     const order = await Order.findById(orderId)
@@ -212,4 +215,3 @@ exports.getSingleOrder = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-

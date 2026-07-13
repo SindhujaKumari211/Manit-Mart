@@ -12,8 +12,8 @@ const mongoose = require("mongoose");
 
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-const Product = require("../models/Product");
-const User = require("../models/User");
+const getModels = require("../models");
+const { getDatabaseName } = require("../config/colleges");
 
 const img = (id) => `https://images.unsplash.com/${id}?w=600&h=450&fit=crop`;
 
@@ -34,6 +34,10 @@ const SEED_PRODUCTS = [
   try {
     if (!process.env.MONGO_URI) throw new Error("MONGO_URI not set");
     await mongoose.connect(process.env.MONGO_URI);
+    const college = process.env.COLLEGE || "manit";
+    const databaseName = getDatabaseName(college);
+    if (!databaseName) throw new Error(`Unsupported college: ${college}`);
+    const { Product, User } = getModels(mongoose.connection.useDb(databaseName, { useCache: true }));
 
     const seller = await User.findOne().sort({ createdAt: 1 });
     if (!seller) throw new Error("No user found to own seeded products. Register a user first.");

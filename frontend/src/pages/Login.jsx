@@ -4,10 +4,12 @@ import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import Button from "../components/ui/Button";
 import { Label, Input, FieldError } from "../components/ui/Field";
+import { getCollege } from "../lib/college";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const college = getCollege();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -72,7 +74,7 @@ const Login = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-          <p className="text-sm text-gray-500 mt-1">Sign in to your Manit Mart account</p>
+          <p className="text-sm text-gray-500 mt-1">Sign in to your {college.marketplaceName} account</p>
         </div>
 
         {/* Form Card */}
@@ -93,7 +95,7 @@ const Login = () => {
               <Input
                 type="email"
                 name="email"
-                placeholder="you@manit.ac.in"
+                placeholder={`you@${college.emailDomain}`}
                 value={form.email}
                 onChange={handleChange}
                 error={errors.email}

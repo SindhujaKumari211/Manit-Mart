@@ -7,7 +7,7 @@ const SLIDES = [
   {
     eyebrow: "Campus marketplace",
     title: "Everything you need, from students you trust",
-    subtitle: "Books, cycles, electronics & hostel essentials — right here at MANIT.",
+    subtitle: "Books, cycles, electronics & hostel essentials — right here on campus.",
     cta: "Browse listings",
     to: "/search",
     grad: "from-[#132a4a] to-[#2563EB]",

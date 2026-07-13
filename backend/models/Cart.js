@@ -27,6 +27,4 @@ const cartSchema = new mongoose.Schema(
 // Ensure a user can't add the same product twice
 cartSchema.index({ user: 1, product: 1 }, { unique: true });
 
-const Cart = mongoose.model("Cart", cartSchema);
-
-module.exports = Cart;
+module.exports = (db) => db.models.Cart || db.model("Cart", cartSchema);

@@ -12,6 +12,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const { selectCollegeDatabase } = require("./middleware/collegeMiddleware");
 
 const app = express();   // ✅ FIRST create app
 
@@ -20,6 +21,10 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("dev"));
+
+// Every API request is scoped to one college database selected only by
+// X-College. The default preserves existing MANIT clients during migration.
+app.use("/api", selectCollegeDatabase);
 
 // Uploaded images are meant to be embedded by a frontend on a different origin/port,
 // so relax the default same-origin resource policy just for this static route.

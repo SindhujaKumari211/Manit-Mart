@@ -1,4 +1,3 @@
-const Product = require("../models/Product");
 const { validationResult } = require("express-validator");
 
 // Escapes regex metacharacters so user search input can't build unintended/unsafe patterns
@@ -8,6 +7,7 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 exports.createProduct = async (req, res) => {
   try {
+    const { Product } = req.models;
     console.log("BODY:", req.body);
     console.log("USER:", req.user);
 
@@ -89,6 +89,7 @@ const buildProductFilter = (query) => {
 ========================= */
 exports.getProducts = async (req, res) => {
   try {
+    const { Product } = req.models;
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(2000, Math.max(1, Number(req.query.limit) || 12));
     const skip = (page - 1) * limit;
@@ -142,6 +143,7 @@ exports.getProducts = async (req, res) => {
 ========================= */
 exports.getSuggestions = async (req, res) => {
   try {
+    const { Product } = req.models;
     const term = (req.query.q || "").trim();
     if (!term) return res.json({ suggestions: [], categories: [] });
 
@@ -170,6 +172,7 @@ exports.getSuggestions = async (req, res) => {
 ========================= */
 exports.getMyProducts = async (req, res) => {
   try {
+    const { Product } = req.models;
     const products = await Product.find({ seller: req.user._id })
       .populate("seller", "name email")
       .sort({ createdAt: -1 });
@@ -185,6 +188,7 @@ exports.getMyProducts = async (req, res) => {
 ========================= */
 exports.getSingleProduct = async (req, res) => {
   try {
+    const { Product } = req.models;
     const product = await Product.findById(req.params.id)
       .populate("seller", "name email phone address");
 
@@ -213,6 +217,7 @@ const EDITABLE_PRODUCT_FIELDS = [
 
 exports.updateProduct = async (req, res) => {
   try {
+    const { Product } = req.models;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -248,6 +253,7 @@ exports.updateProduct = async (req, res) => {
 ========================= */
 exports.deleteProduct = async (req, res) => {
   try {
+    const { Product } = req.models;
     const product = await Product.findById(req.params.id);
 
     if (!product)
@@ -269,6 +275,7 @@ exports.deleteProduct = async (req, res) => {
 ========================= */
 exports.markAsSold = async (req, res) => {
   try {
+    const { Product } = req.models;
     const product = await Product.findById(req.params.id);
 
     if (!product)

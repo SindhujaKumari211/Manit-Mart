@@ -1,5 +1,6 @@
 // Generates a print-ready invoice from real order data and opens it in a new
 // window so the user can print or "Save as PDF". No backend/PDF lib required.
+import { getCollege } from "./college";
 
 const inr = (n) => `Rs. ${Number(n || 0).toLocaleString("en-IN")}`;
 const esc = (s) =>
@@ -16,6 +17,7 @@ export function downloadInvoice(order) {
     day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
   const payment = order.paymentMethod === "online" ? "Online Payment" : "Cash on Delivery";
+  const college = getCollege();
 
   win.document.write(`<!doctype html><html><head><meta charset="utf-8">
 <title>Invoice ${esc(order._id?.slice(-8))}</title>
@@ -32,7 +34,7 @@ export function downloadInvoice(order) {
   @media print{body{padding:20px}}
 </style></head><body onload="window.focus()">
   <div class="top">
-    <div><div class="brand">Manit<span>Mart</span></div><div class="muted">Campus Marketplace · MANIT Bhopal</div></div>
+    <div><div class="brand">${esc(college.name)}<span>Mart</span></div><div class="muted">Campus Marketplace · ${esc(college.name)} ${esc(college.location)}</div></div>
     <div style="text-align:right"><div style="font-weight:700">INVOICE</div><div class="muted">#${esc(order._id?.slice(-8))}</div><div class="muted">${esc(date)}</div></div>
   </div>
 
