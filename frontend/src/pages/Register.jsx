@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import API from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import Button from "../components/ui/Button";
 import { Label, Input, FieldError } from "../components/ui/Field";
 import { getCollege } from "../lib/college";
@@ -9,7 +10,9 @@ import { getCollege } from "../lib/college";
 const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const toast = useToast();
   const college = getCollege();
+
 
   const [form, setForm] = useState({
     name: "",
@@ -53,6 +56,11 @@ const Register = () => {
     try {
       const { data } = await API.post("/auth/register", form);
       login(data.token, data._id);
+      
+      // The backend returns { message: "Account created. Check your email to verify your address." }
+      // Show this as a success toast before navigating.
+      toast.success(data.message || "Account verification mail has been sent to your email.");
+      
       navigate("/");
     } catch (error) {
       setErrors({ form: error.response?.data?.message || "Registration failed. Please try again." });

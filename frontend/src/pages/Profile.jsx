@@ -41,6 +41,7 @@ const Profile = () => {
         phone: user.phone || "",
         address: user.address || "",
         profilePicture: user.profilePicture || "",
+        isVerified: user.isVerified || false,
       });
       setImagePreview(user.profilePicture || "");
     } catch (error) {
@@ -48,6 +49,23 @@ const Profile = () => {
       setMessage("Failed to load profile");
     }
   };
+
+  const [resending, setResending] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
+
+  const handleResendVerification = async () => {
+    setResending(true);
+    setResendMsg("");
+    try {
+      const { data } = await API.post("/auth/resend-verification", { email: formData.email });
+      setResendMsg(data.message || "Verification email sent!");
+    } catch (error) {
+      setResendMsg(error.response?.data?.message || "Failed to send verification email.");
+    } finally {
+      setResending(false);
+    }
+  };
+
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -322,9 +340,35 @@ const Profile = () => {
 
             {/* Email (Read-only) */}
             <div>
-              <Label htmlFor="profile-email">Email</Label>
+              <div className="flex items-center gap-2 mb-1">
+                <Label htmlFor="profile-email" className="mb-0">Email</Label>
+                {formData.isVerified ? (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Verified</span>
+                ) : (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">Unverified</span>
+                )}
+              </div>
               <Input id="profile-email" type="email" value={formData.email} disabled />
+              
+              {!formData.isVerified && formData.email && (
+                <div className="mt-2 text-sm">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resending}
+                    className="text-brand-700 hover:underline disabled:opacity-50"
+                  >
+                    {resending ? "Sending..." : "Resend verification email"}
+                  </button>
+                  {resendMsg && (
+                    <p className={`mt-1 text-xs ${resendMsg.includes("sent") ? "text-green-600" : "text-red-600"}`}>
+                      {resendMsg}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
 
             {/* Department (Read-only) */}
             <div>

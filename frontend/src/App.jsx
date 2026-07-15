@@ -40,6 +40,10 @@ import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Help from "./pages/Help";
 import Chats from "./pages/Chats";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+
 
 // Route content wrapped in an error boundary that resets on navigation (keyed
 // by pathname), so a crash on one page never takes down the navbar/footer and
@@ -92,6 +96,10 @@ function RoutedContent() {
             }
           />
           <Route path="/help" element={<Help />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+
         </Routes>
       </ErrorBoundary>
     </main>

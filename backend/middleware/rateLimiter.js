@@ -18,4 +18,15 @@ const registerLimiter = rateLimit({
   message: { success: false, message: "Too many accounts created from this IP. Please try again later." },
 });
 
-module.exports = { loginLimiter, registerLimiter };
+// Tight limit on email-sending routes (verification resend / forgot password)
+// 5 requests per hour per IP — prevents using the service as a spam relay.
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many email requests. Please wait an hour before trying again." },
+});
+
+module.exports = { loginLimiter, registerLimiter, emailLimiter };
+

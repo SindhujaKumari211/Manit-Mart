@@ -1,9 +1,12 @@
 const dotenv = require("dotenv");
 const path = require("path");
+
+// Load env vars BEFORE requiring app, so that required modules
+// (like emailService) have access to process.env at load time.
+dotenv.config({ path: path.join(__dirname, "../.env") });
+
 const app = require("./app");
 const connectDB = require("./config/db");
-
-dotenv.config({ path: path.join(__dirname, "../.env") });
 
 const requiredEnvVars = ["JWT_SECRET", "MONGO_URI"];
 const missingEnvVars = requiredEnvVars.filter((key) => !process.env[key]);
