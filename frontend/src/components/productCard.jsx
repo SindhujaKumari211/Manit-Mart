@@ -235,10 +235,10 @@ const ProductCard = ({ product }) => {
             {stockStatus.inStock && !product.isSold && (
               <>
                 <span className="text-secondary-300">•</span>
-                <span className="inline-flex items-center gap-1 text-text-secondary">
+                {/* <span className="inline-flex items-center gap-1 text-text-secondary">
                   {TruckIcon}
                   {getDeliveryLabel(product)}
-                </span>
+                </span> */}
               </>
             )}
           </div>
@@ -353,7 +353,7 @@ const ProductCard = ({ product }) => {
             {stockStatus.inStock && !product.isSold && (
               <>
                 <span className="text-secondary-300">•</span>
-                <span className="inline-flex items-center gap-1 text-text-secondary">{TruckIcon}{getDeliveryLabel(product)}</span>
+                {/* <span className="inline-flex items-center gap-1 text-text-secondary">{TruckIcon}{getDeliveryLabel(product)}</span> */}
               </>
             )}
           </div>

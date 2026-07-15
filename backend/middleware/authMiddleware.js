@@ -27,3 +27,19 @@ exports.protect = async (req, res, next) => {
     return res.status(401).json({ message: "No token" });
   }
 };
+
+// Like protect but never blocks — silently attaches req.user if token is valid
+exports.optionalAuth = async (req, res, next) => {
+  try {
+    const auth = req.headers.authorization;
+    if (auth && auth.startsWith("Bearer ")) {
+      const token = auth.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await req.models.User.findById(decoded.id).select("-password");
+    }
+  } catch {
+    // Invalid/expired token — just don't set req.user
+  }
+  next();
+};
+

@@ -33,7 +33,7 @@ const ICONS = {
  * recent searches (localStorage), popular-category launcher, and keyboard
  * navigation. Submitting routes to the /search results page.
  */
-const SearchBar = ({ onNavigate }) => {
+const SearchBar = ({ onNavigate, onExpandedChange, className = "", inputClassName = "" }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [value, setValue] = useState("");
@@ -50,6 +50,10 @@ const SearchBar = ({ onNavigate }) => {
     setSyncedSearch(location.search);
     setValue(new URLSearchParams(location.search).get("q") || "");
   }
+
+  useEffect(() => {
+    onExpandedChange?.(open);
+  }, [open, onExpandedChange]);
 
   const term = value.trim();
   const typing = term.length >= 2;
@@ -181,7 +185,7 @@ const SearchBar = ({ onNavigate }) => {
   const recentCount = recent.length;
 
   return (
-    <div ref={boxRef} className="relative w-full">
+    <div ref={boxRef} className={`relative w-full ${className}`}>
       <div className="relative">
         <span className="absolute inset-y-0 left-3.5 flex items-center text-muted pointer-events-none">
           <Icon path={ICONS.search} />
@@ -203,7 +207,7 @@ const SearchBar = ({ onNavigate }) => {
           aria-expanded={showDropdown}
           aria-controls="search-suggestions"
           autoComplete="off"
-          className="w-full pl-10 pr-9 py-2.5 rounded-full bg-secondary-100 border border-transparent text-sm text-text-primary placeholder-muted transition-all duration-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10"
+          className={`w-full pl-10 pr-9 py-2.5 rounded-full bg-secondary-100 border border-transparent text-sm text-text-primary placeholder-muted transition-all duration-200 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 ${inputClassName}`}
         />
         {value && (
           <button

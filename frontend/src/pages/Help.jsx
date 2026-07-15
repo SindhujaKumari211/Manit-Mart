@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../components/ui/Button";
 import Badge from "../components/ui/Badge";
 import { Label, Input, TextArea, Select } from "../components/ui/Field";
 import { useToast } from "../context/ToastContext";
+import API from "../services/api";
+import { useAuth } from "../context/AuthContext";
+
+
 
 const FAQS = [
   {
@@ -44,7 +48,7 @@ const FAQS = [
 ];
 
 const TICKETS_KEY = "mm:tickets";
-const readTickets = () => {
+const readLocalTickets = () => {
   try {
     const arr = JSON.parse(localStorage.getItem(TICKETS_KEY) || "[]");
     return Array.isArray(arr) ? arr : [];
@@ -72,27 +76,59 @@ const FaqItem = ({ q, a }) => {
 
 const Help = () => {
   const toast = useToast();
-  const [tickets, setTickets] = useState(readTickets);
-  const [form, setForm] = useState({ category: "", subject: "", message: "" });
+  const { isLoggedIn } = useAuth();
+  const [tickets, setTickets] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ category: "", subject: "", message: "", email: "" });
 
-  const submitTicket = (e) => {
+  useEffect(() => {
+    if (isLoggedIn) {
+      API.get("/support/tickets")
+        .then((res) => setTickets(res.data || []))
+        .catch(() => setTickets([]));
+    } else {
+      setTickets(readLocalTickets());
+    }
+  }, [isLoggedIn]);
+
+  const submitTicket = async (e) => {
     e.preventDefault();
     if (!form.category || !form.subject.trim() || !form.message.trim()) {
       toast.error("Please fill in all fields");
       return;
     }
-    const ticket = {
-      id: `T-${Date.now().toString().slice(-6)}`,
-      ...form,
-      status: "Open",
-      createdAt: new Date().toISOString(),
-    };
-    const next = [ticket, ...tickets];
-    setTickets(next);
-    try { localStorage.setItem(TICKETS_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    setForm({ category: "", subject: "", message: "" });
-    toast.success(`Ticket ${ticket.id} raised — our team will get back to you`);
+    setSubmitting(true);
+    try {
+      const payload = {
+        category: form.category,
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+        ...(form.email ? { email: form.email.trim() } : {}),
+      };
+      const res = await API.post("/support/tickets", payload);
+      const newTicket = res.data.ticket;
+
+      // Merge into local list immediately (optimistic)
+      setTickets((prev) => [newTicket, ...prev]);
+
+      // Also persist to localStorage as a fallback cache for guests
+      if (!isLoggedIn) {
+        try {
+          const localList = [newTicket, ...readLocalTickets()];
+          localStorage.setItem(TICKETS_KEY, JSON.stringify(localList));
+        } catch { /* private mode */ }
+      }
+
+      setForm({ category: "", subject: "", message: "", email: "" });
+      toast.success(res.data.message || `Ticket ${newTicket.id} raised — our team will get back to you`);
+    } catch (err) {
+      const msg = err.response?.data?.message || "Failed to submit ticket. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-secondary-50 py-8 px-4">
@@ -153,7 +189,28 @@ const Help = () => {
             <Label htmlFor="message">Details</Label>
             <TextArea name="message" rows="4" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Tell us what happened, and include your order ID." />
           </div>
-          <Button type="submit" className="w-full">Submit ticket</Button>
+          {!isLoggedIn && (
+            <div>
+              <Label htmlFor="ticket-email">Your email <span className="text-muted font-normal">(so we can reply)</span></Label>
+              <Input
+                id="ticket-email"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                placeholder="you@college.ac.in"
+              />
+            </div>
+          )}
+          <Button type="submit" disabled={submitting} className="w-full flex items-center justify-center gap-2">
+            {submitting && (
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            )}
+            {submitting ? "Submitting…" : "Submit ticket"}
+          </Button>
         </form>
 
         {/* Ticket queue */}
@@ -171,9 +228,10 @@ const Help = () => {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted mt-3">Tickets move through <b>Open → In Progress → Resolved</b> as our team works them. (Demo queue stored on this device.)</p>
+            <p className="text-xs text-muted mt-3">Tickets move through <b>Open → In Progress → Resolved</b> as our team works them.</p>
           </>
         )}
+
       </div>
     </div>
   );

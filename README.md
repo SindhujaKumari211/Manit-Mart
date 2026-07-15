@@ -44,11 +44,11 @@ npm start                # plain node
 
 Required environment variables (`.env` at repo root — see `.env.example`):
 
-| Variable      | Description                                                |
-|---------------|--------------------------------------------------------------|
-| `PORT`        | Port the API listens on (default `5000`)                     |
-| `MONGO_URI`   | MongoDB connection string (Atlas or local)                    |
-| `JWT_SECRET`  | Secret used to sign auth tokens — use a long random string     |
+| Variable     | Description                                                |
+| ------------ | ---------------------------------------------------------- |
+| `PORT`       | Port the API listens on (default `5000`)                   |
+| `MONGO_URI`  | MongoDB connection string (Atlas or local)                 |
+| `JWT_SECRET` | Secret used to sign auth tokens — use a long random string |
 
 The server validates these on startup and exits immediately with a clear error if any
 are missing, rather than failing confusingly later.
@@ -92,14 +92,14 @@ marketplace screens have been built yet.
 All endpoints are prefixed with `/api`. Protected endpoints require an
 `Authorization: Bearer <token>` header (token returned from register/login).
 
-| Resource   | Endpoints |
-|------------|-----------|
-| Auth       | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/profile` |
-| Products   | `GET /products`, `GET /products/suggestions`, `GET /products/mine`, `POST /products`, `GET/PUT/DELETE /products/:id`, `PUT /products/:id/sold` |
-| Upload     | `POST /upload` (multipart `image` field, max 5MB, jpg/png/webp) |
-| Cart       | `GET/POST/DELETE /cart`, `PUT/DELETE /cart/:productId` |
-| Wishlist   | `GET/POST /wishlist`, `DELETE /wishlist/:productId`, `GET /wishlist/check/:productId` |
-| Orders     | `POST /orders`, `GET /orders/my-orders`, `GET /orders/seller-orders`, `GET /orders/:orderId`, `PUT /orders/:orderId/status`, `PUT /orders/:orderId/cancel` |
+| Resource | Endpoints                                                                                                                                                  |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth     | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/profile`                                                                                         |
+| Products | `GET /products`, `GET /products/suggestions`, `GET /products/mine`, `POST /products`, `GET/PUT/DELETE /products/:id`, `PUT /products/:id/sold`             |
+| Upload   | `POST /upload` (multipart `image` field, max 5MB, jpg/png/webp)                                                                                            |
+| Cart     | `GET/POST/DELETE /cart`, `PUT/DELETE /cart/:productId`                                                                                                     |
+| Wishlist | `GET/POST /wishlist`, `DELETE /wishlist/:productId`, `GET /wishlist/check/:productId`                                                                      |
+| Orders   | `POST /orders`, `GET /orders/my-orders`, `GET /orders/seller-orders`, `GET /orders/:orderId`, `PUT /orders/:orderId/status`, `PUT /orders/:orderId/cancel` |
 
 ### Search (`GET /products`)
 

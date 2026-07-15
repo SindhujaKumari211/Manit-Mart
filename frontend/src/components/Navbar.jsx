@@ -73,6 +73,7 @@ const Navbar = () => {
   const [userData, setUserData] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [scrolled, setScrolled] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const isActive = (path) => location.pathname === path;
@@ -158,12 +159,12 @@ const Navbar = () => {
           scrolled ? "shadow-soft border-border" : "border-border"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 sm:gap-6 h-16">
             {/* Logo */}
             <Link
               to="/"
-              className={`flex items-center gap-2 shrink-0 rounded-lg ${focusRing}`}
+              className={`flex items-center gap-2 shrink-0 rounded-lg transition-opacity duration-200 ${mobileSearchOpen ? "opacity-0 pointer-events-none" : ""} ${focusRing}`}
             >
               <Logo className="w-9 h-9 shrink-0" />
               <span className="text-lg font-bold text-text-primary hidden sm:block tracking-tight">
@@ -171,13 +172,27 @@ const Navbar = () => {
               </span>
             </Link>
 
+            {/* Search (mobile) */}
+            <div
+              className={`md:hidden flex-1 min-w-0 transition-all duration-300 ease-out ${
+                mobileSearchOpen
+                  ? "absolute left-4 right-4 top-2 z-50"
+                  : "max-w-[220px]"
+              }`}
+            >
+              <SearchBar
+                onExpandedChange={setMobileSearchOpen}
+                inputClassName={mobileSearchOpen ? "shadow-xl" : ""}
+              />
+            </div>
+
             {/* Search (desktop) */}
             <div className="hidden md:flex flex-1 max-w-xl">
               <SearchBar />
             </div>
 
             {/* Desktop right-side actions */}
-            <div className="hidden md:flex items-center gap-1 ml-auto shrink-0">
+            <div className={`hidden md:flex items-center gap-1 ml-auto shrink-0 ${mobileSearchOpen ? "opacity-0 pointer-events-none" : ""}`}>
               <CollegeSelector className="mr-2" />
               <NavLink to="/" active={isActive("/")}>Home</NavLink>
               <NavLink to="/chats" active={isActive("/chats")}>Chats</NavLink>
@@ -312,7 +327,7 @@ const Navbar = () => {
 
             {/* Mobile quick actions */}
             {isLoggedIn && (
-              <div className="md:hidden ml-auto flex items-center gap-1">
+              <div className={`md:hidden ml-auto flex items-center gap-1 transition-all duration-200 ${mobileSearchOpen ? "opacity-0 pointer-events-none" : ""}`}>
                 <IconButton
                   to="/add-product"
                   ariaLabel="Add product"
@@ -340,7 +355,7 @@ const Navbar = () => {
               onClick={() => setMenuOpen(true)}
               aria-label="Open menu"
               aria-expanded={menuOpen}
-              className={`md:hidden ${isLoggedIn ? "" : "ml-auto"} flex items-center justify-center w-10 h-10 rounded-lg text-text-secondary hover:bg-secondary-100 transition-colors duration-200 ${focusRing}`}
+              className={`md:hidden ${isLoggedIn ? "" : "ml-auto"} flex items-center justify-center w-10 h-10 rounded-lg text-text-secondary hover:bg-secondary-100 transition-all duration-200 ${mobileSearchOpen ? "opacity-0 pointer-events-none" : ""} ${focusRing}`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

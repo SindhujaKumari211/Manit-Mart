@@ -9,6 +9,8 @@ const {
   deleteProduct,
   markAsSold,
   getMyProducts,
+  getForYouProducts,
+  getCategories,
 } = require("../controllers/productController");
 
 const { protect } = require("../middleware/authMiddleware");
@@ -35,6 +37,10 @@ router.route("/")
 // Must be registered before "/:id" so Express doesn't treat these as an :id param
 router.get("/mine", protect, getMyProducts);
 router.get("/suggestions", getSuggestions);
+router.get("/for-you", getForYouProducts);
+router.get("/categories", getCategories);
+
+
 
 router.route("/:id")
   .get(getSingleProduct)

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "./ui/Logo";
 import { getCollege } from "../lib/college";
+import API from "../services/api";
+
+
 
 /* Link columns. Informational / policy / support links point at the Help
    center (the single info hub that exists) so nothing dead-ends; functional
@@ -86,22 +89,30 @@ const SOCIALS = [
 
 const NewsletterForm = ({ emailDomain }) => {
   const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    // No mailing backend yet — remember locally so we don't re-prompt, and
-    // acknowledge inline. (Wire to an API when a newsletter service exists.)
+    setStatus("loading");
+    setErrorMsg("");
     try {
-      localStorage.setItem("mm:newsletter", email);
-    } catch {
-      /* private mode — non-critical */
+      await API.post("/newsletter/subscribe", { email });
+      setStatus("done");
+    } catch (err) {
+      const msg = err.response?.data?.message || "";
+      // Treat "already subscribed" (duplicate key / 409) as success
+      if (err.response?.status === 409 || msg.toLowerCase().includes("duplicate") || msg.toLowerCase().includes("already")) {
+        setStatus("done");
+      } else {
+        setErrorMsg(msg || "Something went wrong. Please try again.");
+        setStatus("error");
+      }
     }
-    setDone(true);
   };
 
-  if (done) {
+  if (status === "done") {
     return (
       <p className="text-sm text-success-600 font-medium flex items-center gap-2">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,17 +133,30 @@ const NewsletterForm = ({ emailDomain }) => {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder={`you@${emailDomain}`}
-        className="flex-1 px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm text-text-primary placeholder-muted focus:outline-none focus:border-brand-500 transition"
+        disabled={status === "loading"}
+        className="flex-1 px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm text-text-primary placeholder-muted focus:outline-none focus:border-brand-500 transition disabled:opacity-60"
       />
       <button
         type="submit"
-        className="px-4 py-2.5 rounded-xl bg-brand-700 text-white text-sm font-semibold shadow-soft hover:bg-brand-800 hover:-translate-y-0.5 transition-all duration-200 shrink-0"
+        disabled={status === "loading"}
+        className="px-4 py-2.5 rounded-xl bg-brand-700 text-white text-sm font-semibold shadow-soft hover:bg-brand-800 hover:-translate-y-0.5 transition-all duration-200 shrink-0 disabled:opacity-60 disabled:pointer-events-none flex items-center gap-2"
       >
+        {status === "loading" && (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+        )}
         Subscribe
       </button>
+      {status === "error" && (
+        <p className="text-xs text-error-600 mt-1 w-full">{errorMsg}</p>
+      )}
     </form>
   );
 };
+
+
 
 const FooterLink = ({ link }) =>
   link.anchor ? (

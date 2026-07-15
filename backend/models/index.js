@@ -4,6 +4,8 @@ const getCart = require("./Cart");
 const getWishlist = require("./Wishlist");
 const getOrder = require("./Order");
 const getChatMessage = require("./ChatMessage");
+const getNewsletter = require("./Newsletter");
+const getSupportTicket = require("./SupportTicket");
 
 // A single place to obtain all models bound to one Mongoose Connection.
 // Do not use mongoose.model() here: that would always target the default DB.
@@ -14,4 +16,7 @@ module.exports = (db) => ({
   Wishlist: getWishlist(db),
   Order: getOrder(db),
   ChatMessage: getChatMessage(db),
+  Newsletter: getNewsletter(db),
+  SupportTicket: getSupportTicket(db),
 });
+

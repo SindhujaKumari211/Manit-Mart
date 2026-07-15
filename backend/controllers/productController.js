@@ -1,4 +1,6 @@
+const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
+
 
 // Escapes regex metacharacters so user search input can't build unintended/unsafe patterns
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -292,3 +294,209 @@ exports.markAsSold = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+/* =========================
+   🔹 GET FOR YOU PRODUCTS
+========================= */
+exports.getForYouProducts = async (req, res) => {
+  try {
+    const { Product } = req.models;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(2000, Math.max(1, Number(req.query.limit) || 12));
+    const skip = (page - 1) * limit;
+
+    const categoryList = req.query.categories ? req.query.categories.split(",") : [];
+    const excludeList = req.query.exclude ? req.query.exclude.split(",") : [];
+    const sort = req.query.sort || "relevance";
+
+    const filter = { isSold: false };
+
+    const term = (req.query.q || "").trim();
+    if (term) {
+      const rx = { $regex: escapeRegex(term), $options: "i" };
+      filter.$or = [
+        { name: rx },
+        { description: rx },
+        { category: rx },
+        { brand: rx },
+        { tags: rx },
+        { condition: rx },
+        { department: rx },
+        { hostel: rx },
+      ];
+    }
+
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+
+    if (excludeList.length > 0) {
+      const validObjectIds = excludeList
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+      if (validObjectIds.length > 0) {
+        filter._id = { $nin: validObjectIds };
+      }
+    }
+
+    const sortObj = SORT_MAP[sort] || SORT_MAP.relevance;
+
+    let totalProducts = 0;
+    let products = [];
+    const isPersonalized = categoryList.length > 0;
+
+    if (sort === "relevance" && isPersonalized) {
+      const pipeline = [
+        { $match: filter },
+        {
+          $addFields: {
+            categoryIndex: {
+              $indexOfArray: [categoryList, "$category"],
+            },
+          },
+        },
+        {
+          $addFields: {
+            inCategories: {
+              $cond: { if: { $eq: ["$categoryIndex", -1] }, then: 1, else: 0 },
+            },
+          },
+        },
+        {
+          $sort: {
+            inCategories: 1,
+            categoryIndex: 1,
+            createdAt: -1,
+          },
+        },
+      ];
+
+      totalProducts = await Product.countDocuments(filter);
+
+      pipeline.push(
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: "users",
+            localField: "seller",
+            foreignField: "_id",
+            as: "seller",
+          },
+        },
+        {
+          $unwind: {
+            path: "$seller",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            "seller.password": 0,
+            "seller.isAdmin": 0,
+          },
+        }
+      );
+
+      products = await Product.aggregate(pipeline);
+    } else {
+      [totalProducts, products] = await Promise.all([
+        Product.countDocuments(filter),
+        Product.find(filter)
+          .populate("seller", "name email")
+          .skip(skip)
+          .limit(limit)
+          .sort(sortObj),
+      ]);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        page,
+        totalPages: Math.ceil(totalProducts / limit) || 1,
+        totalProducts,
+        products,
+        personalized: isPersonalized,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getForYouProducts:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+/* =========================
+   🔹 GET ALL PRODUCT CATEGORIES WITH COUNTS
+========================= */
+exports.getCategories = async (req, res) => {
+  try {
+    const { Product } = req.models;
+
+    const defaultCategories = [
+      "Books",
+      "Notes",
+      "Electronics",
+      "Gadgets",
+      "Laptops",
+      "Mobiles",
+      "Cycles",
+      "Bicycles",
+      "Hostel Essentials",
+      "Kitchen Items",
+      "Study Table",
+      "Chairs",
+      "Furniture",
+      "Sports",
+      "Calculators",
+      "Laboratory Equipment",
+      "Fashion",
+      "Bags",
+      "Shoes",
+      "Stationery",
+      "Accessories",
+      "Room Decor",
+      "Musical Instruments",
+      "Other"
+    ];
+
+    const categoryCounts = await Product.aggregate([
+      { $match: { isSold: false } },
+      { $group: { _id: "$category", count: { $sum: 1 } } }
+    ]);
+
+    const countsMap = new Map();
+    categoryCounts.forEach((c) => {
+      if (c._id) {
+        countsMap.set(c._id.toString(), c.count);
+      }
+    });
+
+    const categoriesResult = defaultCategories.map((cat) => ({
+      value: cat,
+      count: countsMap.get(cat) || 0
+    }));
+
+    categoryCounts.forEach((c) => {
+      if (c._id) {
+        const catStr = c._id.toString();
+        if (!defaultCategories.includes(catStr)) {
+          categoriesResult.push({
+            value: catStr,
+            count: c.count
+          });
+        }
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      categories: categoriesResult
+    });
+  } catch (error) {
+    console.error("Error in getCategories:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+

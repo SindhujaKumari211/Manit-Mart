@@ -12,6 +12,9 @@ const cartRoutes = require("./routes/cartRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const uploadRoutes = require("./routes/uploadRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const newsletterRoutes = require("./routes/newsletterRoutes");
+const supportRoutes = require("./routes/supportRoutes");
+
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { selectCollegeDatabase } = require("./middleware/collegeMiddleware");
 
@@ -45,6 +48,9 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/support", supportRoutes);
+
 
 app.get("/", (req, res) => {
   res.send("API Running Successfully 🚀");

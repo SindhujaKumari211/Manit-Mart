@@ -39,3 +39,4 @@ Thumbs.db
 # Expo / mobile
 manit-marketplace-mobile/.expo/
 manit-marketplace-mobile/node_modules/
+.aider*
