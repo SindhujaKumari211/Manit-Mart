@@ -8,6 +8,8 @@ import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
 import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR } from "../lib/productDisplay";
 import { handleImageError, productImage } from "../lib/categoryImages";
+import ProductChat from "./ProductChat";
+
 
 const TruckIcon = (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,6 +35,7 @@ const ProductCard = ({ product }) => {
   const [heartPulse, setHeartPulse] = useState(false);
   const [hovering, setHovering] = useState(false);
   const [activeImg, setActiveImg] = useState(0);
+  const [showChat, setShowChat] = useState(false);
 
   const gallery = [product.image, ...(product.images || [])].filter(Boolean);
   const discount = getDiscount(product);
@@ -274,27 +277,42 @@ const ProductCard = ({ product }) => {
           </button>
         )}
 
-        {/* Add to Cart / Buy Now (non-owner, available products only) */}
+        {/* Add to Cart / Buy Now / Chat (non-owner, available products only) */}
         {!isOwner && !product.isSold && userId && (
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 flex gap-1.5">
             <button
               onClick={toggleCart}
               disabled={!stockStatus.inStock}
               aria-pressed={inCart}
-              className={`flex items-center justify-center gap-1.5 py-2 text-xs font-semibold border rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2 text-[11px] sm:text-xs font-semibold border rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
                 inCart
                   ? "bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
                   : "text-text-secondary border-border hover:bg-secondary-50"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              {inCart ? "In Cart" : "Add to Cart"}
+              {inCart ? "In Cart" : "Cart"}
             </button>
+            
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowChat(true);
+              }}
+              className="flex-1 flex items-center justify-center gap-1 py-2 text-[11px] sm:text-xs font-semibold border border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Chat
+            </button>
+
             <Link
               to={canTransact ? `/product/${product._id}?buyNow=1` : `/product/${product._id}`}
-              className={`flex items-center justify-center py-2 text-xs font-semibold rounded-lg transition ${
+              className={`flex-1 flex items-center justify-center py-2 text-[11px] sm:text-xs font-semibold rounded-lg transition ${
                 canTransact
                   ? "bg-brand-700 text-white hover:bg-brand-800"
                   : "bg-secondary-100 text-secondary-400 pointer-events-none"
@@ -369,31 +387,54 @@ const ProductCard = ({ product }) => {
             >
               View Full Details
             </Link>
-            {!isOwner && !product.isSold && userId && (
+          </div>
+          {canTransact && (
+            <div className="mt-4 flex gap-2">
               <button
                 onClick={toggleCart}
                 disabled={!stockStatus.inStock}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
+                aria-pressed={inCart}
+                className={`flex-1 py-2.5 text-sm font-semibold border rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
                   inCart
                     ? "bg-brand-50 text-brand-800 border-2 border-brand-200 hover:bg-brand-100"
-                    : "bg-brand-700 text-white hover:bg-brand-800"
+                    : "text-text-secondary border-2 border-border hover:bg-secondary-50"
                 }`}
               >
-                {inCart ? "Remove from Cart" : "Add to Cart"}
+                {inCart ? "In Cart" : "Cart"}
               </button>
-            )}
-          </div>
-          {canTransact && (
-            <Link
-              to={`/product/${product._id}?buyNow=1`}
-              onClick={() => setQuickViewOpen(false)}
-              className="mt-3 block text-center py-2.5 text-sm font-semibold rounded-lg border-2 border-brand-700 text-brand-700 hover:bg-brand-50 transition"
-            >
-              Buy Now
-            </Link>
+
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setQuickViewOpen(false);
+                  setShowChat(true);
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold border-2 border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer"
+              >
+                <svg className="w-4 h-4 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                Chat
+              </button>
+
+              <Link
+                to={`/product/${product._id}?buyNow=1`}
+                onClick={() => setQuickViewOpen(false)}
+                className="flex-1 text-center py-2.5 text-sm font-semibold rounded-lg border-2 border-brand-700 text-brand-700 hover:bg-brand-50 transition"
+              >
+                Buy Now
+              </Link>
+            </div>
           )}
         </div>
       </Modal>
+      {showChat && (
+        <ProductChat
+          product={product}
+          isSeller={isOwner}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div>
   );
 };

@@ -43,9 +43,7 @@ import Chats from "./pages/Chats";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
-
-
-// Route content wrapped in an error boundary that resets on navigation (keyed
+import Terms from "./pages/Terms";// Route content wrapped in an error boundary that resets on navigation (keyed
 // by pathname), so a crash on one page never takes down the navbar/footer and
 // the user can simply navigate away to recover.
 function RoutedContent() {
@@ -55,6 +53,7 @@ function RoutedContent() {
       <ErrorBoundary key={location.pathname}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/terms" element={<Terms />} />
           <Route
             path="/search"
             element={

@@ -7,6 +7,7 @@ import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
 import { getDiscount, getStockStatus, getDeliveryLabel, getRatingInfo, formatINR } from "../lib/productDisplay";
 import { handleImageError, productImage } from "../lib/categoryImages";
+import ProductChat from "./ProductChat";
 
 const TruckIcon = (
   <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,6 +36,7 @@ const FreshListingCard = ({ product }) => {
   const [imgFailed, setImgFailed] = useState(false);
   const [heartPulse, setHeartPulse] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   const gallery = [product.image, ...(product.images || [])].filter(Boolean);
   const discount = getDiscount(product);
@@ -245,26 +247,43 @@ const FreshListingCard = ({ product }) => {
             {product.isSold ? "Mark as Available" : "Mark as Sold"}
           </button>
         ) : !product.isSold && userId ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex gap-1.5">
             <button
               onClick={toggleCart}
               disabled={!stockStatus.inStock}
               aria-pressed={inCart}
-              className={`h-10 w-full flex items-center justify-center gap-1.5 text-xs font-semibold rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-40 disabled:pointer-events-none ${
+              className={`flex-1 flex items-center justify-center gap-1 py-2.5 text-[11px] sm:text-xs font-semibold border rounded-lg transition disabled:opacity-40 disabled:pointer-events-none ${
                 inCart
-                  ? "bg-brand-50 text-brand-800 border-2 border-brand-200 hover:bg-brand-100"
-                  : "border-2 border-border text-text-secondary hover:bg-secondary-50"
+                  ? "bg-brand-50 text-brand-800 border-brand-200 hover:bg-brand-100"
+                  : "text-text-secondary border-border hover:bg-secondary-50"
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              {inCart ? "In Cart" : "Add to Cart"}
+              {inCart ? "In Cart" : "Cart"}
             </button>
+
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowChat(true);
+              }}
+              className="flex-1 flex items-center justify-center gap-1 py-2.5 text-[11px] sm:text-xs font-semibold border border-brand-200 text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-lg transition cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Chat
+            </button>
+
             <Link
               to={canTransact ? `${detailHref}?buyNow=1` : detailHref}
-              className={`h-10 w-full flex items-center justify-center text-xs font-semibold rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                canTransact ? "bg-brand-700 text-white hover:bg-brand-800" : "bg-secondary-100 text-secondary-400 pointer-events-none"
+              className={`flex-1 flex items-center justify-center py-2.5 text-[11px] sm:text-xs font-semibold rounded-lg transition ${
+                canTransact
+                  ? "bg-brand-700 text-white hover:bg-brand-800"
+                  : "bg-secondary-100 text-secondary-400 pointer-events-none"
               }`}
             >
               Buy Now
@@ -279,6 +298,13 @@ const FreshListingCard = ({ product }) => {
           </Link>
         )}
       </div>
+      {showChat && (
+        <ProductChat
+          product={product}
+          isSeller={isOwner}
+          onClose={() => setShowChat(false)}
+        />
+      )}
     </div>
   );
 };

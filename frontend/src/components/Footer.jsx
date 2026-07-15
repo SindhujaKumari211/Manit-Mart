@@ -38,8 +38,8 @@ const COLUMNS = [
   {
     title: "Policies",
     links: [
-      { label: "Privacy Policy", to: "/help" },
-      { label: "Terms & Conditions", to: "/help" },
+      { label: "Privacy Policy", to: "/terms" },
+      { label: "Terms & Conditions", to: "/terms" },
       { label: "Refund & Cancellation", to: "/help" },
     ],
   },

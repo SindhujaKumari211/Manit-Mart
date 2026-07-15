@@ -60,6 +60,18 @@ export function downloadInvoice(order) {
   </table>
 
   <div class="total"><span>Total (${esc(payment)})</span><span>${inr(order.totalPrice)}</span></div>
+  
+  <div style="margin-top:40px; padding-top:20px; border-top:1px solid #e5e7eb; font-size:11px; color:#4b5563; line-height:1.5;">
+    <h3 style="font-size:12px; font-weight:700; color:#374151; margin-bottom:8px; text-transform:uppercase;">Terms &amp; Conditions</h3>
+    <ul style="margin:0; padding-left:16px; list-style-type:square;">
+      <li style="margin-bottom:4px;">KnowYourBrand is only a platform that connects buyers and sellers.</li>
+      <li style="margin-bottom:4px;">KnowYourBrand does not own, inspect, verify, or guarantee any listed product.</li>
+      <li style="margin-bottom:4px;">Buyers and sellers are solely responsible for verifying the condition, authenticity, quality, pricing, and legality of products before completing a transaction.</li>
+      <li style="margin-bottom:4px;">KnowYourBrand is not responsible for any disputes, fraud, damages, losses, payment issues, delivery issues, or misrepresentation between users.</li>
+      <li style="margin-bottom:4px;">Users should exercise their own judgment and meet in safe public places when exchanging products.</li>
+      <li>By using the platform, both buyers and sellers agree that KnowYourBrand acts only as an intermediary marketplace and bears no liability for transactions conducted through the platform.</li>
+    </ul>
+  </div>
 
   <div class="foot">Status: ${esc(order.status)} · This is a system-generated invoice for a peer-to-peer campus sale.</div>
   <script>setTimeout(function(){window.print();},250);</script>
