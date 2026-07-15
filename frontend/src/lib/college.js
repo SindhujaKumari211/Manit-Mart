@@ -10,13 +10,13 @@ export const COLLEGES = Object.freeze({
 		emailDomain: "bhu.ac.in",
 		location: "Varanasi",
 	},
-	// manit: {
-	// 	id: "manit",
-	// 	name: "MANIT",
-	// 	marketplaceName: "MANIT Mart",
-	// 	emailDomain: "manit.ac.in",
-	// 	location: "Bhopal",
-	// },
+	manit: {
+		id: "manit",
+		name: "MANIT",
+		marketplaceName: "MANIT Mart",
+		emailDomain: "manit.ac.in",
+		location: "Bhopal",
+	},
 });
 
 export const getSelectedCollege = () => {

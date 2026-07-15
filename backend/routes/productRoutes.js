@@ -28,7 +28,7 @@ router.route("/")
       body("condition").optional().isIn(["New", "Used"]).withMessage("Condition must be New or Used"),
       body("department").notEmpty().withMessage("Department required"),
       body("hostel").notEmpty().withMessage("Hostel required"),
-      body("image").notEmpty().withMessage("Image required"),
+      body("image").optional({ checkFalsy: true }).isString().withMessage("Image must be a string"),
     ],
     createProduct
   )

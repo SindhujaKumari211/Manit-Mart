@@ -16,7 +16,11 @@ exports.createProduct = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       console.log("VALIDATION ERRORS:", errors.array());
-      return res.status(400).json({ errors: errors.array() });
+      const errorMsg = errors.array().map(err => `${err.path || err.param}: ${err.msg}`).join(", ");
+      return res.status(400).json({ 
+        message: `Validation failed: ${errorMsg}`,
+        errors: errors.array() 
+      });
     }
 
     const product = await Product.create({
