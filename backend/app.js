@@ -20,6 +20,9 @@ const { selectCollegeDatabase } = require("./middleware/collegeMiddleware");
 
 const app = express();   // ✅ FIRST create app
 
+// Trust proxy settings (required for express-rate-limit behind Nginx)
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(express.json());
 app.use(cors());
